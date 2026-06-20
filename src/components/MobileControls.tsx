@@ -74,7 +74,7 @@ export default function MobileControls({
       {/* 2. Ultimate Burst Button (Top-right of Attack) */}
       <button
         onPointerDown={(e) => handleAction(e, onUltimate)}
-        className={`absolute top-4 right-4 w-13 h-13 rounded-full flex flex-col items-center justify-center shadow-lg active:scale-90 transition-transform cursor-pointer border overflow-hidden`}
+        className={`absolute bottom-[136px] right-[30px] w-13 h-13 rounded-full flex flex-col items-center justify-center shadow-lg active:scale-90 transition-transform cursor-pointer border overflow-hidden`}
         style={{
           backgroundColor: ultReady ? '#eab308' : 'rgba(15, 23, 42, 0.85)',
           borderColor: ultReady ? '#fef08a' : 'rgba(255, 255, 255, 0.15)',
@@ -97,7 +97,7 @@ export default function MobileControls({
           }
         }}
         disabled={skillCooldown > 0}
-        className="absolute top-4 right-20 w-13 h-13 rounded-full flex flex-col items-center justify-center shadow-lg active:scale-90 transition-transform cursor-pointer border relative overflow-hidden bg-slate-900/85 disabled:opacity-50"
+        className="absolute bottom-[136px] right-[96px] w-13 h-13 rounded-full flex flex-col items-center justify-center shadow-lg active:scale-90 transition-transform cursor-pointer border relative overflow-hidden bg-slate-900/85 disabled:opacity-50"
         style={{
           borderColor: skillCooldown > 0 ? 'rgba(255,255,255,0.05)' : `${elemColor}66`,
           color: skillCooldown > 0 ? '#64748b' : elemColor,
@@ -124,7 +124,7 @@ export default function MobileControls({
           }
         }}
         disabled={dodgeCooldown > 0}
-        className="absolute bottom-4 right-28 w-13 h-13 rounded-full flex flex-col items-center justify-center shadow-lg active:scale-90 transition-transform cursor-pointer border relative overflow-hidden bg-slate-900/85 disabled:opacity-50"
+        className="absolute bottom-4 right-[96px] w-13 h-13 rounded-full flex flex-col items-center justify-center shadow-lg active:scale-90 transition-transform cursor-pointer border relative overflow-hidden bg-slate-900/85 disabled:opacity-50"
         style={{
           borderColor: dodgeCooldown > 0 ? 'rgba(255,255,255,0.05)' : 'rgba(16, 185, 129, 0.4)',
           color: dodgeCooldown > 0 ? '#64748b' : '#34d399',
@@ -151,7 +151,7 @@ export default function MobileControls({
           }
         }}
         disabled={parryCooldown > 0}
-        className="absolute bottom-20 right-4 w-13 h-13 rounded-full flex flex-col items-center justify-center shadow-lg active:scale-90 transition-transform cursor-pointer border relative overflow-hidden bg-slate-900/85 disabled:opacity-50"
+        className="absolute bottom-[76px] right-[96px] w-13 h-13 rounded-full flex flex-col items-center justify-center shadow-lg active:scale-90 transition-transform cursor-pointer border relative overflow-hidden bg-slate-900/85 disabled:opacity-50"
         style={{
           borderColor: parryCooldown > 0 ? 'rgba(255,255,255,0.05)' : 'rgba(6, 182, 212, 0.4)',
           color: parryCooldown > 0 ? '#64748b' : '#22d3ee',
