@@ -1212,10 +1212,10 @@ export default function App() {
           <div className="flex items-center gap-2">
             <img 
               src={gameLogoImg}
-              alt="Elemental Battleground"
+              alt="ELEMENTAL BATTLEGROUND"
               className="w-10 h-10 rounded-xl object-cover shadow-[0_0_16px_rgba(251,191,36,0.5)] ring-1 ring-amber-400/30"
             />
-            <span className="font-mono text-xs uppercase tracking-widest text-white drop-shadow font-bold">Elemental Battleground</span>
+            <span className="font-mono text-xs uppercase tracking-widest text-white drop-shadow font-bold">ELEMENTAL BATTLEGROUND</span>
           </div>
           <span className="text-[10px] bg-white/5 border border-white/10 text-slate-400 px-3 py-1 rounded font-mono uppercase">V1.2.0 COMPATIBLE</span>
         </header>
@@ -1264,7 +1264,7 @@ export default function App() {
               <div className="bg-slate-900 border border-white/5 p-4 py-6 rounded-xl">
                 <span className="text-[9px] font-mono tracking-[0.3em] text-[#818cf8] uppercase block mb-1">Dawning Core Client</span>
                 <h1 className="text-3xl font-black tracking-[0.1em] text-white font-display leading-none">
-                  Elemental Battleground
+                  ELEMENTAL BATTLEGROUND
                 </h1>
                 <p className="text-[10px] text-slate-400 mt-2 font-mono uppercase tracking-wide">
                   Realtime Elemental RPG Simulator
@@ -1496,7 +1496,7 @@ export default function App() {
           <div>
             <div className="flex items-center gap-1.5">
               <h1 className="text-lg font-black tracking-widest text-[#f8fafc] font-display uppercase">
-                Elemental Battleground
+                ELEMENTAL BATTLEGROUND
               </h1>
               <span className="text-[8px] bg-amber-400/10 text-amber-300 border border-amber-300/20 px-1.5 py-0.5 rounded font-black tracking-wider uppercase">
                 v1.2.0 LIVE

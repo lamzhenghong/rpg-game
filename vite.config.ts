@@ -13,7 +13,7 @@ export default defineConfig(() => {
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
         manifest: {
-          name: 'Elemental Battleground',
+          name: 'ELEMENTAL BATTLEGROUND',
           short_name: 'Elemental RPG',
           description: 'Realtime Elemental RPG Simulator',
           theme_color: '#0f172a',
