@@ -58,14 +58,18 @@ export default function MobileControls({
 
   return (
     <div 
-      className="fixed bottom-4 right-4 z-50 select-none touch-none w-56 h-56 flex items-center justify-center pointer-events-auto"
+      className="fixed bottom-4 right-4 z-50 select-none touch-none w-56 h-56 pointer-events-auto"
       onPointerDown={(e) => e.stopPropagation()} // Stop propagation to canvas
     >
       {/* 1. Attack Button (Center, largest) */}
       <button
         onPointerDown={(e) => handleAction(e, onAttack)}
-        className="absolute top-[76px] left-[76px] w-[72px] h-[72px] bg-[#0d131f]/80 border border-white/20 active:bg-white/10 text-white rounded-full flex items-center justify-center active:scale-95 transition-all cursor-pointer overflow-hidden z-20"
+        className="absolute bg-[#0d131f]/80 border border-white/20 active:bg-white/10 text-white rounded-full flex items-center justify-center active:scale-95 transition-all cursor-pointer overflow-hidden z-20"
         style={{
+          width: '72px',
+          height: '72px',
+          top: '76px',
+          left: '76px',
           boxShadow: `0 0 12px rgba(255, 255, 255, 0.15), inset 0 0 8px rgba(255, 255, 255, 0.05)`,
           touchAction: 'none'
         }}
@@ -83,8 +87,12 @@ export default function MobileControls({
           }
         }}
         disabled={skillCooldown > 0}
-        className="absolute top-[22px] left-[88px] w-[48px] h-[48px] rounded-full flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer border relative overflow-hidden bg-[#0d131f]/80 disabled:opacity-50 z-20"
+        className="absolute rounded-full flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer border relative overflow-hidden bg-[#0d131f]/80 disabled:opacity-50 z-20"
         style={{
+          width: '48px',
+          height: '48px',
+          top: '22px',
+          left: '88px',
           borderColor: skillCooldown > 0 ? 'rgba(255,255,255,0.05)' : `${elemColor}80`,
           color: skillCooldown > 0 ? '#64748b' : elemColor,
           boxShadow: skillCooldown > 0 ? 'none' : `0 0 15px ${elemColor}40, inset 0 0 8px ${elemColor}15`,
@@ -120,8 +128,12 @@ export default function MobileControls({
           onParryEnd?.();
         }}
         disabled={parryCooldown > 0}
-        className="absolute top-[88px] left-[22px] w-[48px] h-[48px] rounded-full flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer border relative overflow-hidden bg-[#0d131f]/80 disabled:opacity-50 z-20"
+        className="absolute rounded-full flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer border relative overflow-hidden bg-[#0d131f]/80 disabled:opacity-50 z-20"
         style={{
+          width: '48px',
+          height: '48px',
+          top: '88px',
+          left: '22px',
           borderColor: parryCooldown > 0 ? 'rgba(255,255,255,0.05)' : 'rgba(6, 182, 212, 0.6)',
           color: parryCooldown > 0 ? '#64748b' : '#22d3ee',
           boxShadow: parryCooldown > 0 ? 'none' : '0 0 15px rgba(6, 182, 212, 0.4), inset 0 0 8px rgba(6, 182, 212, 0.1)',
@@ -147,8 +159,12 @@ export default function MobileControls({
           }
         }}
         disabled={dodgeCooldown > 0}
-        className="absolute top-[154px] left-[88px] w-[48px] h-[48px] rounded-full flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer border relative overflow-hidden bg-[#0d131f]/80 disabled:opacity-50 z-20"
+        className="absolute rounded-full flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer border relative overflow-hidden bg-[#0d131f]/80 disabled:opacity-50 z-20"
         style={{
+          width: '48px',
+          height: '48px',
+          top: '154px',
+          left: '88px',
           borderColor: dodgeCooldown > 0 ? 'rgba(255,255,255,0.05)' : 'rgba(16, 185, 129, 0.6)',
           color: dodgeCooldown > 0 ? '#64748b' : '#34d399',
           boxShadow: dodgeCooldown > 0 ? 'none' : '0 0 15px rgba(16, 185, 129, 0.4), inset 0 0 8px rgba(16, 185, 129, 0.1)',
@@ -167,8 +183,12 @@ export default function MobileControls({
       {/* 5. Ultimate Burst Button (Right) */}
       <button
         onPointerDown={(e) => handleAction(e, onUltimate)}
-        className="absolute top-[88px] left-[154px] w-[48px] h-[48px] rounded-full flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer border relative overflow-hidden bg-[#0d131f]/80 z-20"
+        className="absolute rounded-full flex flex-col items-center justify-center active:scale-95 transition-all cursor-pointer border relative overflow-hidden bg-[#0d131f]/80 z-20"
         style={{
+          width: '48px',
+          height: '48px',
+          top: '88px',
+          left: '154px',
           borderColor: ultReady ? '#eab308' : 'rgba(255, 255, 255, 0.3)',
           color: ultReady ? '#fbbf24' : '#e2e8f0',
           boxShadow: ultReady 
