@@ -1,0 +1,6 @@
+{
+  "name": "Anime Open World RPG Simulator",
+  "description": "An interactive AAA game design document, gacha pull simulator, and real-time element-reaction combat game representing an anime open-world RPG.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
