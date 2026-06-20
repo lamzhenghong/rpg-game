@@ -8,6 +8,7 @@ import {
 import { motion, AnimatePresence } from 'motion/react';
 import { AetheriaAudioEngine } from '../utils/audio';
 import CombatArena from './CombatArena';
+import { LanguageType } from '../utils/i18n';
 
 interface RogueDungeonProps {
   partyIds: string[];
@@ -24,6 +25,8 @@ interface RogueDungeonProps {
   devCheatsEnabled?: boolean;
   screenShakeEnabled?: boolean;
   combatSpeed?: number;
+  fpsLimit?: '60' | 'none';
+  language?: LanguageType;
 }
 
 const DUNGEON_BUFFS = [
@@ -49,7 +52,9 @@ export default function RogueDungeon({
   onAddItems,
   devCheatsEnabled = true,
   screenShakeEnabled = true,
-  combatSpeed = 1.0
+  combatSpeed = 1.0,
+  fpsLimit = '60',
+  language = 'en'
 }: RogueDungeonProps) {
   // Parse helper for loading state from localStorage
   const getSavedValue = (key: string, defaultValue: any) => {
@@ -373,6 +378,8 @@ export default function RogueDungeon({
           devCheatsEnabled={devCheatsEnabled}
           screenShakeEnabled={screenShakeEnabled}
           combatSpeed={combatSpeed}
+          fpsLimit={fpsLimit}
+          language={language}
         />
       );
     }

@@ -11,6 +11,7 @@ import { AetheriaAudioEngine } from '../utils/audio';
 import { WEAPONS_DATABASE } from '../data/weapons';
 import { getAccumulatedPortraitBuffs } from '../utils/portraits';
 import ElementalReactionsModal from './ElementalReactionsModal';
+import { LanguageType, t } from '../utils/i18n';
 
 export function getUpgradedWeaponStats(weapon: Weapon) {
   const lvl = weapon.level || 1;
@@ -87,6 +88,7 @@ interface InventoryManagerProps {
   onClaimQuestReward?: (qId: string) => void;
   characterPortraits?: Record<string, number>;
   devCheatsEnabled?: boolean;
+  language?: LanguageType;
 }
 
 export default function InventoryManager({
@@ -105,7 +107,8 @@ export default function InventoryManager({
   activeQuests = [],
   onClaimQuestReward,
   characterPortraits = {},
-  devCheatsEnabled = true
+  devCheatsEnabled = true,
+  language = 'en'
 }: InventoryManagerProps) {
   const [selectedCharId, setSelectedCharId] = useState<string>(ownedCharacterIds[0] || 'aurelia');
   const [activeTab, setActiveTab] = useState<'weapons' | 'items' | 'characters'>('characters');
@@ -768,17 +771,31 @@ export default function InventoryManager({
                         </span>
                       </div>
                       <span className="text-[10px] text-slate-500 font-mono block mt-1 tracking-wider lowercase text-right">
-                        * upgraded {Math.floor(activeEquippedWeapon.level / 5)} times (+15% sub-bonus per 5 levels)
+                        * upgraded {Math.floor(Math.min(activeEquippedWeapon.level, 49) / 5)} times (+15% sub-bonus per 5 levels)
                       </span>
 
-                      <p className="text-xs text-slate-350 font-mono uppercase mt-2.5">
-                        LEVEL PROGRESS: LV.{activeEquippedWeapon.level} ➔ <span className="text-emerald-400 font-black">LV.{activeEquippedWeapon.level + 1}</span> (ATK +2.5 & Enhancements)
-                      </p>
-                      <p className="text-xs text-amber-400 font-black font-mono mt-1 uppercase tracking-wide">UPGRADE COST: {(activeEquippedWeapon.level * 200).toLocaleString()} MORA</p>
+                      {activeEquippedWeapon.level >= 50 ? (
+                        <p className="text-xs text-emerald-400 font-mono uppercase mt-2.5 font-black">
+                          LEVEL: LV.{activeEquippedWeapon.level} (MAXED)
+                        </p>
+                      ) : (
+                        <p className="text-xs text-slate-350 font-mono uppercase mt-2.5">
+                          LEVEL PROGRESS: LV.{activeEquippedWeapon.level} ➔ <span className="text-emerald-400 font-black">LV.{activeEquippedWeapon.level + 1}</span> (ATK +2.5 & Enhancements)
+                        </p>
+                      )}
+                      {activeEquippedWeapon.level >= 50 ? (
+                        <p className="text-xs text-emerald-400 font-mono uppercase mt-1 font-black">
+                          WEAPON HAS REACHED MAXIMUM LEVEL
+                        </p>
+                      ) : (
+                        <p className="text-xs text-amber-400 font-black font-mono mt-1 uppercase tracking-wide">
+                          UPGRADE COST: {(activeEquippedWeapon.level * 200).toLocaleString()} MORA
+                        </p>
+                      )}
                     </div>
 
                     {/* ACTIVE FORGED FEATURE (PASSIVE) INNER CARD */}
-                    <div className="p-3.5 bg-gradient-to-br from-indigo-950/40 to-[#0c0d1b] border border-indigo-505/20 border-indigo-500/20 rounded-lg shadow-inner">
+                    <div className="p-3.5 bg-gradient-to-br from-indigo-950/40 to-[#0c0d1b] border border-indigo-500/20 rounded-lg shadow-inner">
                       <span className="text-[11px] font-black uppercase text-indigo-300 tracking-wider flex items-center gap-1.5 pb-1 border-b border-indigo-500/15 mb-2">
                         <Hammer className="w-3.5 h-3.5 text-indigo-400" />
                         Active Forged Feature (Passive)
@@ -788,20 +805,25 @@ export default function InventoryManager({
                       </p>
                       <div className="flex justify-between items-center mt-3 pt-2 border-t border-white/5">
                         <span className="text-[10px] text-[#fbbf24] font-mono uppercase font-black tracking-widest">
-                          Refinement Stage: S{Math.floor(activeEquippedWeapon.level / 5) + 1}
+                          Refinement Stage: S{Math.floor(Math.min(activeEquippedWeapon.level, 49) / 5) + 1}
                         </span>
                         <span className="text-[10px] text-emerald-400 font-mono uppercase font-bold text-right">
-                          Passive Potency: +{Math.floor(activeEquippedWeapon.level / 5) * 8}%
+                          Passive Potency: +{Math.floor(Math.min(activeEquippedWeapon.level, 49) / 5) * 8}%
                         </span>
                       </div>
                     </div>
 
                     <button
                       type="button"
+                      disabled={activeEquippedWeapon.level >= 50}
                       onClick={() => onUpgradeWeapon && onUpgradeWeapon(activeEquippedWeapon.id)}
-                      className="mt-2 bg-indigo-600 hover:bg-indigo-550 text-white font-black text-xs uppercase tracking-widest py-3 rounded-lg active:scale-95 transition-all text-center cursor-pointer shadow-md border border-indigo-500/20"
+                      className={`mt-2 ${
+                        activeEquippedWeapon.level >= 50
+                          ? 'bg-slate-800 text-slate-500 border-slate-700 shadow-none cursor-not-allowed border-slate-700 shadow-none'
+                          : 'bg-indigo-650 hover:bg-indigo-550 text-white shadow-md border-indigo-500/20'
+                      } font-black text-xs uppercase tracking-widest py-3 rounded-lg active:scale-95 transition-all text-center cursor-pointer border`}
                     >
-                      Enchant Weapon (Forge Level Up)
+                      {activeEquippedWeapon.level >= 50 ? 'WEAPON MAXED' : 'Enchant Weapon (Forge Level Up)'}
                     </button>
                   </div>
                 )}
@@ -811,27 +833,40 @@ export default function InventoryManager({
             <div className="p-4 bg-black/45 border border-white/10 rounded-xl flex flex-col md:flex-row justify-between items-center gap-4 relative overflow-hidden">
               <div className="space-y-1 text-center md:text-left">
                 <h5 className="text-xs font-black text-slate-300 uppercase tracking-widest">Ascend Attunement Sphere</h5>
-                <p className="text-xs text-slate-450 leading-relaxed font-mono uppercase text-slate-300">
-                  REQUIRED: <b className="text-[#fbbf24] font-black">{costSpecs.mora.toLocaleString()} MORA</b> FORGE REQUISITE &{' '}
-                  {usesWit ? (
-                    <><b className="text-indigo-400 font-mono font-black">{costSpecs.materials} HERO'S WIT</b> BOOKS (REMAINING: {availableBooks})</>
-                  ) : (
-                    <><b className="text-emerald-400 font-mono font-black">{costSpecs.materials} MYCONID SPORE CATALYST</b> (REMAINING: {availableCatalyst})</>
-                  )}
-                </p>
+                {charLevel >= 80 ? (
+                  <p className="text-xs text-emerald-400 font-mono uppercase font-black">
+                    CHARACTER LEVEL CAP REACHED (MAXED)
+                  </p>
+                ) : (
+                  <p className="text-xs text-slate-450 leading-relaxed font-mono uppercase text-slate-300">
+                    REQUIRED: <b className="text-[#fbbf24] font-black">{costSpecs.mora.toLocaleString()} MORA</b> FORGE REQUISITE &{' '}
+                    {usesWit ? (
+                      <><b className="text-indigo-400 font-mono font-black">{costSpecs.materials} HERO'S WIT</b> BOOKS (REMAINING: {availableBooks})</>
+                    ) : (
+                      <><b className="text-emerald-400 font-mono font-black">{costSpecs.materials} MYCONID SPORE CATALYST</b> (REMAINING: {availableCatalyst})</>
+                    )}
+                  </p>
+                )}
                 <p className="text-[10px] text-slate-500 font-mono">
-                  {usesWit
-                    ? 'LV.1•50: Uses Hero’s Wit • LV.50•80: Uses Myconid Spore Catalyst'
-                    : 'LV.50•80: Requires Myconid Spore Catalyst from Rogue Ruins'}
+                  {charLevel >= 80
+                    ? 'Maximum level reached. Character parameters are capped.'
+                    : usesWit
+                      ? 'LV.1•50: Uses Hero’s Wit • LV.50•80: Uses Myconid Spore Catalyst'
+                      : 'LV.50•80: Requires Myconid Spore Catalyst from Rogue Ruins'}
                 </p>
               </div>
 
               <button
                 onClick={handleLevelUpClick}
-                className="bg-amber-400 hover:bg-amber-350 text-slate-950 font-black text-xs uppercase tracking-widest px-6 py-3 rounded-lg flex items-center gap-2 shadow-[0_0_15px_rgba(251,191,36,0.30)] transition-all active:scale-95 cursor-pointer border border-amber-300/30"
+                disabled={charLevel >= 80}
+                className={`${
+                  charLevel >= 80
+                    ? 'bg-slate-800 text-slate-500 border-slate-700 shadow-none cursor-not-allowed border-slate-700 shadow-none'
+                    : 'bg-amber-400 hover:bg-amber-350 text-slate-950 shadow-[0_0_15px_rgba(251,191,36,0.30)] border-amber-300/30'
+                } font-black text-xs uppercase tracking-widest px-6 py-3 rounded-lg flex items-center gap-2 transition-all active:scale-95 cursor-pointer border`}
               >
                 <ArrowUpCircle className="w-5 h-5 text-slate-95" />
-                <span>Ascend Character (LV.{charLevel + 1})</span>
+                <span>{charLevel >= 80 ? 'CHARACTER MAXED' : `Ascend Character (LV.${charLevel + 1})`}</span>
               </button>
             </div>
 

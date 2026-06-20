@@ -10,6 +10,7 @@ import CombatArena from './components/CombatArena';
 import InventoryManager from './components/InventoryManager';
 import RogueDungeon from './components/RogueDungeon';
 import { SaveState, Weapon, InventoryItem, Quest, ElementType } from './types';
+import { t, LanguageType } from './utils/i18n';
 import { PLAYABLE_CHARACTERS } from './data/characters';
 import { GDD_DATA } from './data/world';
 import { INITIAL_50_QUESTS } from './data/quests';
@@ -76,6 +77,12 @@ const INITIAL_SAVE_STATE: SaveState = {
     char_banner_2: 0,
     weapon_banner_1: 0,
     weapon_banner_2: 0
+  },
+  bannerGuaranteed5Star: {
+    char_banner_1: false,
+    char_banner_2: false,
+    weapon_banner_1: false,
+    weapon_banner_2: false
   },
   stats: {
     totalPulls: 0,
@@ -185,6 +192,14 @@ export default function App() {
   const [devCheatsEnabled, setDevCheatsEnabled] = useState<boolean>(() => {
     const saved = localStorage.getItem('aetheria_pref_dev_cheats');
     return saved !== null ? saved === 'true' : true;
+  });
+
+  const [partySearchQuery, setPartySearchQuery] = useState('');
+  const [language, setLanguage] = useState<LanguageType>(() => {
+    return (localStorage.getItem('rpg_language') as LanguageType) || 'en';
+  });
+  const [fpsLimit, setFpsLimit] = useState<'60' | 'none'>(() => {
+    return (localStorage.getItem('rpg_fps_limit') as '60' | 'none') || '60';
   });
   const [screenShakeEnabled, setScreenShakeEnabled] = useState<boolean>(() => {
     const saved = localStorage.getItem('aetheria_pref_screen_shake');
@@ -392,6 +407,10 @@ export default function App() {
           bannerPity4Star: {
             ...defaultState.bannerPity4Star,
             ...(parsed.bannerPity4Star || {})
+          },
+          bannerGuaranteed5Star: {
+            ...defaultState.bannerGuaranteed5Star,
+            ...(parsed.bannerGuaranteed5Star || {})
           },
           stats: {
             ...defaultState.stats,
@@ -1096,7 +1115,7 @@ export default function App() {
   };
 
   // Pity Counters updates per banner
-  const handleUpdatePity = (bannerId: string, pity5: number, pity4: number) => {
+  const handleUpdatePity = (bannerId: string, pity5: number, pity4: number, guaranteed5?: boolean) => {
     triggerSaveUpdate(prev => ({
       ...prev,
       gachaPity5Star: pity5,
@@ -1108,6 +1127,10 @@ export default function App() {
       bannerPity4Star: {
         ...(prev.bannerPity4Star || {}),
         [bannerId]: pity4
+      },
+      bannerGuaranteed5Star: {
+        ...(prev.bannerGuaranteed5Star || {}),
+        [bannerId]: guaranteed5 !== undefined ? guaranteed5 : (prev.bannerGuaranteed5Star?.[bannerId] ?? false)
       }
     }));
   };
@@ -1648,7 +1671,7 @@ export default function App() {
               id="dash_screen_wiki"
             >
               <BookOpen className="w-3.5 h-3.5 shrink-0 text-slate-955 text-slate-950" />
-              <span className="hidden md:inline">GDD & Lore Wiki</span>
+              <span className="hidden md:inline">{t('lore_wiki', language)}</span>
               <span className="md:hidden">Wiki</span>
             </button>
 
@@ -1665,7 +1688,7 @@ export default function App() {
               id="dash_screen_arena"
             >
               <Sword className="w-3.5 h-3.5 shrink-0 animate-pulse text-slate-955 text-slate-950" />
-              <span className="hidden md:inline">Combat Arena</span>
+              <span className="hidden md:inline">{t('combat_arena', language)}</span>
               <span className="md:hidden">Arena</span>
             </button>
 
@@ -1682,7 +1705,7 @@ export default function App() {
               id="dash_screen_dungeon"
             >
               <Landmark className={`w-3.5 h-3.5 shrink-0 ${activeScreen === 'dungeon' ? 'text-slate-955' : 'text-violet-400 animate-pulse'}`} />
-              <span className="hidden md:inline">Rogue Ruins</span>
+              <span className="hidden md:inline">{t('rogue_ruins', language)}</span>
               <span className="md:hidden">Rogue</span>
             </button>
 
@@ -1699,7 +1722,7 @@ export default function App() {
               id="dash_screen_wish"
             >
               <Sparkles className="w-3.5 h-3.5 shrink-0 text-slate-955 text-slate-950" />
-              <span className="hidden md:inline">Wish Summons</span>
+              <span className="hidden md:inline">{t('celestial_summons', language)}</span>
               <span className="md:hidden">Wish</span>
             </button>
 
@@ -1716,7 +1739,7 @@ export default function App() {
               id="dash_screen_inventory"
             >
               <Hammer className="w-3.5 h-3.5 shrink-0 text-slate-955 text-slate-950" />
-              <span className="hidden md:inline">Hero Forge</span>
+              <span className="hidden md:inline">{t('forge_ascension', language)}</span>
               <span className="md:hidden">Forge</span>
             </button>
 
@@ -1733,7 +1756,7 @@ export default function App() {
               id="dash_screen_quest"
             >
               <Trophy className="w-3.5 h-3.5 shrink-0 text-slate-955 text-slate-950" />
-              <span>Quest</span>
+              <span>{t('quest_log', language)}</span>
             </button>
 
             <button
@@ -1749,7 +1772,7 @@ export default function App() {
               id="dash_screen_party"
             >
               <Users className="w-3.5 h-3.5 shrink-0 text-slate-955 text-slate-950" />
-              <span className="hidden md:inline">Party Setup</span>
+              <span className="hidden md:inline">{t('party_setup', language)}</span>
               <span className="md:hidden">Party</span>
             </button>
           </div>
@@ -1768,6 +1791,7 @@ export default function App() {
                   <GDDViewer 
                     ownedCharacterIds={saveState.unlockedCharacterIds || []}
                     characterPortraits={saveState.characterPortraits || {}}
+                    language={language}
                   />
                 </motion.div>
               )}
@@ -1816,6 +1840,8 @@ export default function App() {
                     devCheatsEnabled={devCheatsEnabled}
                     screenShakeEnabled={screenShakeEnabled}
                     combatSpeed={combatSpeed}
+                    fpsLimit={fpsLimit}
+                    language={language}
                   />
                 </motion.div>
               )}
@@ -1844,6 +1870,8 @@ export default function App() {
                     devCheatsEnabled={devCheatsEnabled}
                     screenShakeEnabled={screenShakeEnabled}
                     combatSpeed={combatSpeed}
+                    fpsLimit={fpsLimit}
+                    language={language}
                   />
                 </motion.div>
               )}
@@ -1865,11 +1893,13 @@ export default function App() {
                     onAddWeapon={(w) => handleAddWeapon(w)}
                     bannerPity5Star={saveState.bannerPity5Star || {}}
                     bannerPity4Star={saveState.bannerPity4Star || {}}
-                    onUpdatePity={(bid, p5, p4) => handleUpdatePity(bid, p5, p4)}
+                    bannerGuaranteed5Star={saveState.bannerGuaranteed5Star || {}}
+                    onUpdatePity={(bid, p5, p4, g5) => handleUpdatePity(bid, p5, p4, g5)}
                     onLogPulls={(items) => handleLogPulls(items)}
                     pullHistoryList={pullHistory}
                     onShowAlert={(msg, sol, typ) => showInGameAlert(msg, sol, typ)}
                     devCheatsEnabled={devCheatsEnabled}
+                    language={language}
                   />
                 </motion.div>
               )}
@@ -1883,22 +1913,21 @@ export default function App() {
                   key="inventory_scr"
                 >
                   <InventoryManager 
-                    mora={saveState.mora}
-                    inventoryWeapons={saveState.inventoryWeapons}
-                    inventoryItems={saveState.inventoryItems}
-                    characterLevels={saveState.characterLevels}
-                    characterEquippedWeapon={saveState.characterEquippedWeapon}
                     ownedCharacterIds={saveState.unlockedCharacterIds || []}
-                    onLevelUpCharacter={(id, mCost, iCost) => handleLevelUpCharacter(id, mCost, iCost)}
-                    onEquipWeapon={(cid, wuid) => handleEquipWeapon(cid, wuid)}
-                    onModifyCurrencies={(g, m) => handleModifyCurrencies(g, m)}
-                    onUpgradeWeapon={(wuid) => handleUpgradeWeapon(wuid)}
-                    onShowAlert={(msg, sol, typ) => showInGameAlert(msg, sol, typ)}
-                    onAddItems={handleAddItems}
-                    activeQuests={saveState.activeQuests}
-                    onClaimQuestReward={claimQuestReward}
+                    characterLevels={saveState.characterLevels}
+                    inventoryWeapons={saveState.inventoryWeapons || []}
+                    inventoryItems={saveState.inventoryItems || []}
+                    characterEquippedWeapon={saveState.characterEquippedWeapon || {}}
                     characterPortraits={saveState.characterPortraits || {}}
+                    mora={saveState.mora}
+                    onEquipWeapon={(cid, wid) => handleEquipWeapon(cid, wid)}
+                    onLevelUpCharacter={handleLevelUpCharacter}
+                    onUpgradeWeapon={(wuid) => handleUpgradeWeapon(wuid)}
+                    onAddItems={handleAddItems}
+                    onShowAlert={(msg, sol, typ) => showInGameAlert(msg, sol, typ)}
+                    onModifyCurrencies={(g, m) => handleModifyCurrencies(g, m)}
                     devCheatsEnabled={devCheatsEnabled}
+                    language={language}
                   />
                 </motion.div>
               )}
@@ -1930,87 +1959,131 @@ export default function App() {
                   className="w-full"
                 >
                   <div className="bg-[#0b0f19]/70 border border-white/10 p-6 rounded-xl shadow-[0_4px_30px_rgba(0,0,0,0.4)] backdrop-blur-md space-y-6">
-                    <div className="border-b border-white/5 pb-3">
-                      <h3 className="text-sm font-black text-slate-200 uppercase tracking-widest flex items-center gap-2 font-display">
-                        <Users className="w-4 h-4 text-emerald-450 text-emerald-405 text-emerald-400" />
-                        Combat Party Setup ({saveState.partyIds.length}/4)
-                      </h3>
-                      <p className="text-[10px] text-slate-405 text-slate-400 mt-1">
-                        Deploy up to 4 heroes to sync elemental reaction triggers inside the active arena.
-                      </p>
+                    <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center border-b border-white/5 pb-3">
+                      <div>
+                        <h3 className="text-sm font-black text-slate-200 uppercase tracking-widest flex items-center gap-2 font-display">
+                          <Users className="w-4 h-4 text-[#10b981]" />
+                          {t('party_setup', language)} ({saveState.partyIds.length}/4)
+                        </h3>
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          Deploy up to 4 heroes to sync elemental reaction triggers inside the active arena.
+                        </p>
+                      </div>
+
+                      {/* Search Bar */}
+                      <div className="relative w-full md:w-64 shrink-0">
+                        <input
+                          type="text"
+                          value={partySearchQuery}
+                          onChange={(e) => setPartySearchQuery(e.target.value)}
+                          placeholder={t('search_placeholder', language)}
+                          className="w-full bg-slate-900/60 border border-white/10 hover:border-white/20 focus:border-indigo-500 rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none transition-all uppercase tracking-wide font-mono font-bold"
+                        />
+                        {partySearchQuery && (
+                          <button
+                            onClick={() => setPartySearchQuery('')}
+                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-[10px] font-black cursor-pointer"
+                          >
+                            ✕
+                          </button>
+                        )}
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                      {PLAYABLE_CHARACTERS.map(c => {
-                        const isChecked = saveState.partyIds.includes(c.id);
-                        const isOwned = (saveState.unlockedCharacterIds || []).includes(c.id);
+                      {(() => {
+                        const ownedCharacters = PLAYABLE_CHARACTERS.filter(c => (saveState.unlockedCharacterIds || []).includes(c.id));
+                        const sortedOwnedCharacters = [...ownedCharacters].sort((a, b) => {
+                          const levelA = saveState.characterLevels[a.id] || 1;
+                          const levelB = saveState.characterLevels[b.id] || 1;
+                          if (levelB !== levelA) {
+                            return levelB - levelA; // highest level character first
+                          }
+                          return b.rarity - a.rarity; // then only rarity
+                        });
 
-                        if (!isOwned) return null;
+                        const filteredCharacters = sortedOwnedCharacters.filter(c => {
+                          const query = partySearchQuery.toLowerCase();
+                          return c.name.toLowerCase().includes(query) ||
+                                 c.element.toLowerCase().includes(query) ||
+                                 c.weaponType.toLowerCase().includes(query);
+                        });
 
-                        const charLvl = saveState.characterLevels[c.id] || 1;
-                        const equippedWeaponId = saveState.characterEquippedWeapon[c.id];
-                        const weaponObj = saveState.inventoryWeapons?.find(w => w.id === equippedWeaponId);
-
-                        return (
-                          <button
-                            key={c.id}
-                            onClick={() => {
-                              if (isChecked) {
-                                if (saveState.partyIds.length <= 1) return; // Must have at least 1
-                                triggerSaveUpdate(prev => ({
-                                  ...prev,
-                                  partyIds: prev.partyIds.filter(pid => pid !== c.id)
-                                }));
-                              } else {
-                                if (saveState.partyIds.length >= 4) return; // max 4
-                                triggerSaveUpdate(prev => ({
-                                  ...prev,
-                                  partyIds: [...prev.partyIds, c.id]
-                                }));
-                              }
-                              AetheriaAudioEngine.playClick();
-                            }}
-                            className={`p-4 rounded-xl border text-left flex flex-col justify-between min-h-[110px] h-auto transition-all relative overflow-hidden cursor-pointer ${
-                              isChecked
-                                ? 'bg-[#0f172a] border-amber-400 text-white shadow-[0_0_18px_rgba(251,191,36,0.2)] ring-1 ring-amber-400/30'
-                                : 'bg-black/35 border-white/5 text-slate-405 hover:border-white/15'
-                            }`}
-                          >
-                            {isChecked && (
-                              <span className="absolute top-2 right-2 bg-amber-400 text-slate-950 font-black text-[7.5px] px-1.5 py-0.5 rounded uppercase tracking-wider">
-                                Active
-                              </span>
-                            )}
-                            <div>
-                              <div className="flex items-center gap-1.5 w-full justify-between pr-10">
-                                <span className="font-black text-[12px] truncate uppercase tracking-tight text-slate-100">{c.name}</span>
-                                <span className="bg-slate-800 border border-slate-700 text-amber-500 font-mono text-[8px] px-1.5 py-0.5 rounded leading-none shrink-0">LV.{charLvl}</span>
-                              </div>
-                              <div className="flex shrink-0 gap-0.5 mt-1 select-none">
-                                {Array.from({ length: c.rarity }).map((_, i) => (
-                                  <Star key={i} className="w-2.5 h-2.5 text-amber-400 fill-amber-400 shrink-0" />
-                                ))}
-                              </div>
+                        if (filteredCharacters.length === 0) {
+                          return (
+                            <div className="col-span-full text-center py-10 text-slate-500 text-xs italic font-mono uppercase">
+                              No matching characters found in roster.
                             </div>
+                          );
+                        }
 
-                            <div className="mt-4 border-t border-white/5 pt-2 flex flex-col gap-0.5">
-                              <div className="flex justify-between items-center text-[9px] font-mono text-slate-400 uppercase tracking-tight">
-                                <span className="font-bold text-indigo-400">{c.element}</span>
-                                <span className="text-slate-400">{c.weaponType} class</span>
-                              </div>
-                              {weaponObj ? (
-                                <div className="text-[8px] font-medium text-slate-300 truncate font-mono uppercase bg-black/45 px-1.5 py-0.5 rounded border border-white/5 mt-1 tracking-tighter">
-                                  ⚙️ {weaponObj.name} (LV.{weaponObj.level})
-                                </div>
-                              ) : (
-                                <div className="text-[8px] font-medium text-red-400/70 truncate font-mono uppercase bg-black/45 px-1.5 py-0.5 rounded border border-red-955/20 mt-1 tracking-tighter">
-                                  ⚠️ NO WEAPON
-                                </div>
+                        return filteredCharacters.map(c => {
+                          const isChecked = saveState.partyIds.includes(c.id);
+                          const charLvl = saveState.characterLevels[c.id] || 1;
+                          const equippedWeaponId = saveState.characterEquippedWeapon[c.id];
+                          const weaponObj = saveState.inventoryWeapons?.find(w => w.id === equippedWeaponId);
+
+                          return (
+                            <button
+                              key={c.id}
+                              onClick={() => {
+                                if (isChecked) {
+                                  if (saveState.partyIds.length <= 1) return; // Must have at least 1
+                                  triggerSaveUpdate(prev => ({
+                                    ...prev,
+                                    partyIds: prev.partyIds.filter(pid => pid !== c.id)
+                                  }));
+                                } else {
+                                  if (saveState.partyIds.length >= 4) return; // max 4
+                                  triggerSaveUpdate(prev => ({
+                                    ...prev,
+                                    partyIds: [...prev.partyIds, c.id]
+                                  }));
+                                }
+                                AetheriaAudioEngine.playClick();
+                              }}
+                              className={`p-4 rounded-xl border text-left flex flex-col justify-between min-h-[110px] h-auto transition-all relative overflow-hidden cursor-pointer ${
+                                isChecked
+                                  ? 'bg-[#0f172a] border-amber-400 text-white shadow-[0_0_18px_rgba(251,191,36,0.2)] ring-1 ring-amber-400/30'
+                                  : 'bg-black/35 border-white/5 text-slate-400 hover:border-white/15'
+                              }`}
+                            >
+                              {isChecked && (
+                                <span className="absolute top-2 right-2 bg-amber-400 text-slate-950 font-black text-[7.5px] px-1.5 py-0.5 rounded uppercase tracking-wider">
+                                  {t('active_hero', language)}
+                                </span>
                               )}
-                            </div>
-                          </button>
-                        );
-                      })}
+                              <div>
+                                <div className="flex items-center gap-1.5 w-full justify-between pr-10">
+                                  <span className="font-black text-[12px] truncate uppercase tracking-tight text-slate-100">{c.name}</span>
+                                  <span className="bg-slate-800 border border-slate-700 text-amber-500 font-mono text-[8px] px-1.5 py-0.5 rounded leading-none shrink-0">LV.{charLvl}</span>
+                                </div>
+                                <div className="flex shrink-0 gap-0.5 mt-1 select-none">
+                                  {Array.from({ length: c.rarity }).map((_, i) => (
+                                    <Star key={i} className="w-2.5 h-2.5 text-amber-400 fill-amber-400 shrink-0" />
+                                  ))}
+                                </div>
+                              </div>
+
+                              <div className="mt-4 border-t border-white/5 pt-2 flex flex-col gap-0.5">
+                                <div className="flex justify-between items-center text-[9px] font-mono text-slate-400 uppercase tracking-tight">
+                                  <span className="font-bold text-indigo-400">{t(c.element, language)}</span>
+                                  <span className="text-slate-400">{t(c.weaponType, language)} class</span>
+                                </div>
+                                {weaponObj ? (
+                                  <div className="text-[8px] font-medium text-slate-300 truncate font-mono uppercase bg-black/45 px-1.5 py-0.5 rounded border border-white/5 mt-1 tracking-tighter">
+                                    ⚙️ {weaponObj.name} (LV.{weaponObj.level})
+                                  </div>
+                                ) : (
+                                  <div className="text-[8px] font-medium text-red-400/70 truncate font-mono uppercase bg-black/45 px-1.5 py-0.5 rounded border border-red-900/20 mt-1 tracking-tighter">
+                                    ⚠️ {t('no_weapon', language)}
+                                  </div>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        });
+                      })()}
                     </div>
                   </div>
                 </motion.div>
@@ -2036,82 +2109,105 @@ export default function App() {
             <div className="border-b border-white/5 pb-2">
               <h4 className="text-xs font-black text-slate-300 uppercase tracking-widest flex items-center gap-1.5 font-display">
                 <Compass className="w-3.5 h-3.5 text-sky-400" />
-                Combat Party setup ({saveState.partyIds.length}/4)
+                {t('party_setup', language)} ({saveState.partyIds.length}/4)
               </h4>
             </div>
 
             <div className="grid grid-cols-2 gap-2.5">
-              {PLAYABLE_CHARACTERS.map(c => {
-                const isChecked = saveState.partyIds.includes(c.id);
-                const isOwned = (saveState.unlockedCharacterIds || []).includes(c.id);
+              {(() => {
+                const ownedCharacters = PLAYABLE_CHARACTERS.filter(c => (saveState.unlockedCharacterIds || []).includes(c.id));
+                const sortedOwnedCharacters = [...ownedCharacters].sort((a, b) => {
+                  const levelA = saveState.characterLevels[a.id] || 1;
+                  const levelB = saveState.characterLevels[b.id] || 1;
+                  if (levelB !== levelA) {
+                    return levelB - levelA; // highest level character first
+                  }
+                  return b.rarity - a.rarity; // then only rarity
+                });
 
-                if (!isOwned) return null;
+                const filtered = sortedOwnedCharacters.filter(c => {
+                  const query = partySearchQuery.toLowerCase();
+                  return c.name.toLowerCase().includes(query) ||
+                         c.element.toLowerCase().includes(query) ||
+                         c.weaponType.toLowerCase().includes(query);
+                });
 
-                const charLvl = saveState.characterLevels[c.id] || 1;
-                const equippedWeaponId = saveState.characterEquippedWeapon[c.id];
-                const weaponObj = saveState.inventoryWeapons?.find(w => w.id === equippedWeaponId);
-
-                return (
-                  <button
-                    key={c.id}
-                    onClick={() => {
-                      if (isChecked) {
-                        if (saveState.partyIds.length <= 1) return; // Must have at least 1
-                        triggerSaveUpdate(prev => ({
-                          ...prev,
-                          partyIds: prev.partyIds.filter(pid => pid !== c.id)
-                        }));
-                      } else {
-                        if (saveState.partyIds.length >= 4) return; // max 4
-                        triggerSaveUpdate(prev => ({
-                          ...prev,
-                          partyIds: [...prev.partyIds, c.id]
-                        }));
-                      }
-                      AetheriaAudioEngine.playClick();
-                    }}
-                    className={`p-3 rounded-lg text-xs border text-left flex flex-col justify-between min-h-[82px] h-auto transition-all relative overflow-hidden cursor-pointer ${
-                      isChecked
-                        ? 'bg-[#0f172a] border-amber-400 text-white shadow-[0_0_15px_rgba(251,191,36,0.15)]'
-                        : 'bg-black/30 border-white/5 text-slate-500 hover:border-slate-800'
-                    }`}
-                  >
-                    <div>
-                      <div className="flex flex-wrap items-center gap-1 w-full justify-between pr-8">
-                        <span className="font-black text-[11px] truncate uppercase tracking-tighter text-slate-100">{c.name}</span>
-                        <span className="bg-slate-800 border border-slate-700 text-amber-500 font-mono text-[8px] px-1 rounded-sm leading-none h-3.5 flex items-center shrink-0">LV.{charLvl}</span>
-                      </div>
-                      <div className="flex shrink-0 gap-0.5 mt-1 select-none">
-                        {Array.from({ length: c.rarity }).map((_, i) => (
-                          <Star key={i} className="w-2.5 h-2.5 text-amber-400 fill-amber-400 shrink-0" />
-                        ))}
-                      </div>
+                if (filtered.length === 0) {
+                  return (
+                    <div className="col-span-2 text-center py-6 text-slate-500 text-[10px] italic font-mono uppercase">
+                      No matches
                     </div>
+                  );
+                }
 
-                    <div className="mt-2.5 border-t border-white/5 pt-1.5 flex flex-col gap-0.5">
-                      <div className="flex justify-between items-center text-[8.5px] font-mono text-slate-400 uppercase tracking-tight">
-                        <span className="font-bold text-indigo-400">{c.element}</span>
-                        <span>{c.weaponType} class</span>
+                return filtered.map(c => {
+                  const isChecked = saveState.partyIds.includes(c.id);
+                  const charLvl = saveState.characterLevels[c.id] || 1;
+                  const equippedWeaponId = saveState.characterEquippedWeapon[c.id];
+                  const weaponObj = saveState.inventoryWeapons?.find(w => w.id === equippedWeaponId);
+
+                  return (
+                    <button
+                      key={c.id}
+                      onClick={() => {
+                        if (isChecked) {
+                          if (saveState.partyIds.length <= 1) return; // Must have at least 1
+                          triggerSaveUpdate(prev => ({
+                            ...prev,
+                            partyIds: prev.partyIds.filter(pid => pid !== c.id)
+                          }));
+                        } else {
+                          if (saveState.partyIds.length >= 4) return; // max 4
+                          triggerSaveUpdate(prev => ({
+                            ...prev,
+                            partyIds: [...prev.partyIds, c.id]
+                          }));
+                        }
+                        AetheriaAudioEngine.playClick();
+                      }}
+                      className={`p-3 rounded-lg text-xs border text-left flex flex-col justify-between min-h-[82px] h-auto transition-all relative overflow-hidden cursor-pointer ${
+                        isChecked
+                          ? 'bg-[#0f172a] border-amber-400 text-white shadow-[0_0_15px_rgba(251,191,36,0.15)]'
+                          : 'bg-black/30 border-white/5 text-slate-500 hover:border-slate-800'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex flex-wrap items-center gap-1 w-full justify-between pr-8">
+                          <span className="font-black text-[11px] truncate uppercase tracking-tighter text-slate-100">{c.name}</span>
+                          <span className="bg-slate-800 border border-slate-700 text-amber-500 font-mono text-[8px] px-1 rounded-sm leading-none h-3.5 flex items-center shrink-0">LV.{charLvl}</span>
+                        </div>
+                        <div className="flex shrink-0 gap-0.5 mt-1 select-none">
+                          {Array.from({ length: c.rarity }).map((_, i) => (
+                            <Star key={i} className="w-2.5 h-2.5 text-amber-400 fill-amber-400 shrink-0" />
+                          ))}
+                        </div>
                       </div>
-                      {weaponObj ? (
-                        <div className="text-[8px] font-medium text-slate-300 truncate font-mono uppercase bg-black/45 px-1 py-0.5 rounded border border-white/5 mt-0.5 tracking-tighter">
-                          ⚙️ {weaponObj.name} (LV.{weaponObj.level})
+
+                      <div className="mt-2.5 border-t border-white/5 pt-1.5 flex flex-col gap-0.5">
+                        <div className="flex justify-between items-center text-[8.5px] font-mono text-slate-400 uppercase tracking-tight">
+                          <span className="font-bold text-indigo-400">{t(c.element, language)}</span>
+                          <span>{t(c.weaponType, language)} class</span>
                         </div>
-                      ) : (
-                        <div className="text-[7.5px] text-slate-600 truncate font-mono italic mt-0.5">
-                          No Armament Equipped
-                        </div>
+                        {weaponObj ? (
+                          <div className="text-[8px] font-medium text-slate-300 truncate font-mono uppercase bg-black/45 px-1 py-0.5 rounded border border-white/5 mt-0.5 tracking-tighter">
+                            ⚙️ {weaponObj.name} (LV.{weaponObj.level})
+                          </div>
+                        ) : (
+                          <div className="text-[7.5px] text-slate-600 truncate font-mono italic mt-0.5">
+                            {t('no_weapon', language)}
+                          </div>
+                        )}
+                      </div>
+                      
+                      {isChecked && (
+                        <span className="absolute top-1.5 right-1.5 font-mono text-[7px] bg-amber-400 text-slate-950 font-black px-1 py-0.5 rounded-sm uppercase tracking-tight leading-none">
+                          ACTIVE
+                        </span>
                       )}
-                    </div>
-                    
-                    {isChecked && (
-                      <span className="absolute top-1.5 right-1.5 font-mono text-[7px] bg-amber-400 text-slate-950 font-black px-1 py-0.5 rounded-sm uppercase tracking-tight leading-none">
-                        ACTIVE
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
+                    </button>
+                  );
+                });
+              })()}
             </div>
             <p className="text-[9.5px] text-slate-500 leading-normal">
               *Deploy up to 4 heroes to sync elemental reaction triggers inside the active arena.
@@ -2340,19 +2436,38 @@ export default function App() {
                     <span className="text-[10px] font-black text-emerald-400 bg-emerald-900/20 border border-emerald-500/20 px-2 py-1 rounded uppercase tracking-wider">ACTIVE</span>
                   </div>
 
-                  {/* Performance Mode */}
+                  {/* Performance Mode / FPS Limit */}
                   <div className="flex justify-between items-center border-b border-white/5 pb-3">
                     <div>
-                      <span className="text-[11px] text-slate-300 uppercase font-bold block">Performance Mode</span>
-                      <span className="text-[9px] text-slate-500">Reduces particle count for smoother FPS</span>
+                      <span className="text-[11px] text-slate-350 uppercase font-bold block">{t('fps_limit_label', language)}</span>
+                      <span className="text-[9px] text-slate-500">{t('performance_desc', language)}</span>
                     </div>
-                    <span className="text-[10px] font-black text-amber-400 bg-amber-900/20 border border-amber-500/20 px-2 py-1 rounded uppercase tracking-wider">60 FPS</span>
+                    <select
+                      value={fpsLimit}
+                      onChange={(e) => {
+                        const val = e.target.value as '60' | 'none';
+                        setFpsLimit(val);
+                        localStorage.setItem('rpg_fps_limit', val);
+                      }}
+                      className="bg-slate-800 text-slate-200 text-[10px] font-black border border-white/10 rounded px-2 py-1.5 cursor-pointer uppercase tracking-wider focus:outline-none focus:border-indigo-500"
+                    >
+                      <option value="60">{t('fps_limit_60', language)}</option>
+                      <option value="none">{t('fps_limit_none', language)}</option>
+                    </select>
                   </div>
 
                   {/* Language Selector */}
                   <div className="flex justify-between items-center border-b border-white/5 pb-3">
-                    <span className="text-[11px] text-slate-300 uppercase font-bold">Language</span>
-                    <select className="bg-slate-800 text-slate-200 text-[10px] font-black border border-white/10 rounded px-2 py-1.5 cursor-pointer uppercase tracking-wider focus:outline-none focus:border-indigo-500">
+                    <span className="text-[11px] text-slate-300 uppercase font-bold">{t('language_label', language)}</span>
+                    <select
+                      value={language}
+                      onChange={(e) => {
+                        const val = e.target.value as LanguageType;
+                        setLanguage(val);
+                        localStorage.setItem('rpg_language', val);
+                      }}
+                      className="bg-slate-800 text-slate-200 text-[10px] font-black border border-white/10 rounded px-2 py-1.5 cursor-pointer uppercase tracking-wider focus:outline-none focus:border-indigo-500"
+                    >
                       <option value="en">🇺🇸 English</option>
                       <option value="jp">🇯🇵 Japanese</option>
                       <option value="zh">🇨🇳 Chinese</option>

@@ -12,6 +12,7 @@ import { AetheriaAudioEngine } from '../utils/audio';
 import { getPortraitInfoList } from '../utils/portraits';
 import { Shield, Sparkles, BookOpen, Compass, Sword, Landmark, Hammer, Coins, Trophy, DollarSign, Image, Eye, User, Star, Flame, Droplet, Snowflake, Zap, Wind, Mountain, Leaf, Check } from 'lucide-react';
 import { ElementType, WeaponType } from '../types';
+import { LanguageType, t } from '../utils/i18n';
 
 import aureliaBanner from '../../assets/aurelia_banner.png';
 import kaelenBanner from '../../assets/kaelen_banner.png';
@@ -64,13 +65,16 @@ interface GDDViewerProps {
   onUnlockCharacter?: (id: string) => void;
   ownedCharacterIds: string[];
   characterPortraits?: Record<string, number>;
+  language?: LanguageType;
 }
 
-export default function GDDViewer({ onUnlockCharacter, ownedCharacterIds, characterPortraits = {} }: GDDViewerProps) {
+export default function GDDViewer({ onUnlockCharacter, ownedCharacterIds, characterPortraits = {}, language = 'en' }: GDDViewerProps) {
   const [activeTab, setActiveTab] = useState<'lore' | 'nations' | 'characters' | 'weapons' | 'systems' | 'tutorial'>('lore');
   const [selectedCharacterId, setSelectedCharacterId] = useState<string>(PLAYABLE_CHARACTERS[0].id);
   const [selectedWeaponName, setSelectedWeaponName] = useState<string>(WEAPONS_DATABASE[0].name);
   const [selectedNationName, setSelectedNationName] = useState<string>(GDD_DATA.nations[0].name);
+  const [charSearch, setCharSearch] = useState('');
+  const [weapSearch, setWeapSearch] = useState('');
 
   const getElementColor = (element: ElementType) => {
     switch (element) {
@@ -354,46 +358,69 @@ export default function GDDViewer({ onUnlockCharacter, ownedCharacterIds, charac
             >
               {/* Characters sidebar (20 entries) */}
               <div className="space-y-1.5 overflow-y-auto max-h-[500px] pr-1 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest px-2 mb-2">
+                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest px-2 mb-1">
                   Roster Checklist ({PLAYABLE_CHARACTERS.length})
                 </h4>
-                {PLAYABLE_CHARACTERS.map((char) => {
-                  const colors = getElementColor(char.element);
-                  const isOwned = ownedCharacterIds.includes(char.id);
-                  return (
-                    <button
-                      key={char.id}
-                      onClick={() => setSelectedCharacterId(char.id)}
-                      className={`w-full text-left p-2.5 rounded-xl border transition-all flex items-center justify-between ${
-                        selectedCharacterId === char.id
-                          ? 'bg-slate-800 border-slate-700 shadow text-slate-100'
-                          : 'bg-slate-900/30 border-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-slate-950 font-black text-xs ${char.avatarPlaceholder}`}>
-                          {char.name.charAt(0)}
-                        </div>
-                        <div>
-                          <div className="font-bold text-xs flex items-center gap-1">
-                            {char.name}
-                            {char.rarity === 5 && <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400 inline" />}
-                          </div>
-                          <div className={`text-[9px] font-semibold ${colors?.text}`}>
-                            {char.element} • {char.weaponType}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        {isOwned ? (
-                          <span className="text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-black">UNLOCKED</span>
-                        ) : (
-                          <span className="text-[9px] bg-slate-800 text-slate-500 border border-slate-900 px-1.5 py-0.5 rounded font-black">LOCKED</span>
-                        )}
-                      </div>
-                    </button>
+                <div className="px-2 mb-2">
+                  <input
+                    type="text"
+                    value={charSearch}
+                    onChange={(e) => setCharSearch(e.target.value)}
+                    placeholder={t('search_placeholder', language)}
+                    className="w-full bg-slate-900/60 border border-white/10 hover:border-white/20 focus:border-amber-400 rounded-lg px-2.5 py-1 text-[10px] text-slate-200 placeholder-slate-500 focus:outline-none transition-all uppercase tracking-wide font-mono font-bold"
+                  />
+                </div>
+                {(() => {
+                  const filtered = PLAYABLE_CHARACTERS.filter(char => 
+                    char.name.toLowerCase().includes(charSearch.toLowerCase()) ||
+                    char.element.toLowerCase().includes(charSearch.toLowerCase()) ||
+                    char.weaponType.toLowerCase().includes(charSearch.toLowerCase())
                   );
-                })}
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="text-center py-8 text-slate-500 text-xs italic font-mono uppercase">
+                        No matches found
+                      </div>
+                    );
+                  }
+                  return filtered.map((char) => {
+                    const colors = getElementColor(char.element);
+                    const isOwned = ownedCharacterIds.includes(char.id);
+                    return (
+                      <button
+                        key={char.id}
+                        onClick={() => setSelectedCharacterId(char.id)}
+                        className={`w-full text-left p-2.5 rounded-xl border transition-all flex items-center justify-between ${
+                          selectedCharacterId === char.id
+                            ? 'bg-slate-800 border-slate-700 shadow text-slate-100'
+                            : 'bg-slate-900/30 border-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-slate-950 font-black text-xs ${char.avatarPlaceholder}`}>
+                            {char.name.charAt(0)}
+                          </div>
+                          <div>
+                            <div className="font-bold text-xs flex items-center gap-1">
+                              {char.name}
+                              {char.rarity === 5 && <Star className="w-2.5 h-2.5 text-amber-400 fill-amber-400 inline" />}
+                            </div>
+                            <div className={`text-[9px] font-semibold ${colors?.text}`}>
+                              {char.element} • {char.weaponType}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {isOwned ? (
+                            <span className="text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-1.5 py-0.5 rounded font-black">UNLOCKED</span>
+                          ) : (
+                            <span className="text-[9px] bg-slate-800 text-slate-500 border border-slate-900 px-1.5 py-0.5 rounded font-black">LOCKED</span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  });
+                })()}
               </div>
 
               {/* Left big details sheet */}
@@ -591,47 +618,69 @@ export default function GDDViewer({ onUnlockCharacter, ownedCharacterIds, charac
             >
               {/* Weapons sidebar catalog list */}
               <div className="space-y-1.5 overflow-y-auto max-h-[500px] pr-1 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
-                <div className="flex items-center justify-between px-2 mb-2">
+                <div className="flex items-center justify-between px-2 mb-1">
                   <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
                     Weapon Armory ({WEAPONS_DATABASE.length})
                   </h4>
                 </div>
-                {WEAPONS_DATABASE.map((weap) => {
-                  const isSelected = selectedWeaponName === weap.name;
-                  return (
-                    <button
-                      key={weap.name}
-                      onClick={() => {
-                        setSelectedWeaponName(weap.name);
-                        AetheriaAudioEngine.playClick();
-                      }}
-                      className={`w-full text-left p-2.5 rounded-xl border transition-all flex items-center justify-between cursor-pointer ${
-                        isSelected
-                          ? 'bg-slate-800 border-slate-705 shadow text-slate-100 border-slate-700'
-                          : 'bg-slate-900/30 border-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2">
-                        {/* Rarity-colored badge indicator */}
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs text-slate-950 ${
-                          weap.rarity === 5 ? 'bg-gradient-to-tr from-amber-600 to-amber-350' :
-                          weap.rarity === 4 ? 'bg-gradient-to-tr from-purple-600 to-purple-400 text-white' :
-                          'bg-gradient-to-tr from-blue-600 to-blue-400 text-white'
-                        }`}>
-                          {weap.name.charAt(0)}
-                        </div>
-                        <div>
-                          <div className="font-bold text-xs flex items-center gap-1">
-                            {weap.name}
-                          </div>
-                          <div className="text-[9px] font-semibold text-slate-400">
-                            {weap.weaponType} • {weap.rarity}★
-                          </div>
-                        </div>
-                      </div>
-                    </button>
+                <div className="px-2 mb-2">
+                  <input
+                    type="text"
+                    value={weapSearch}
+                    onChange={(e) => setWeapSearch(e.target.value)}
+                    placeholder={t('search_placeholder', language)}
+                    className="w-full bg-slate-900/60 border border-white/10 hover:border-white/20 focus:border-amber-400 rounded-lg px-2.5 py-1 text-[10px] text-slate-200 placeholder-slate-500 focus:outline-none transition-all uppercase tracking-wide font-mono font-bold"
+                  />
+                </div>
+                {(() => {
+                  const filtered = WEAPONS_DATABASE.filter(weap => 
+                    weap.name.toLowerCase().includes(weapSearch.toLowerCase()) ||
+                    weap.weaponType.toLowerCase().includes(weapSearch.toLowerCase())
                   );
-                })}
+                  if (filtered.length === 0) {
+                    return (
+                      <div className="text-center py-8 text-slate-500 text-xs italic font-mono uppercase">
+                        No matches found
+                      </div>
+                    );
+                  }
+                  return filtered.map((weap) => {
+                    const isSelected = selectedWeaponName === weap.name;
+                    return (
+                      <button
+                        key={weap.name}
+                        onClick={() => {
+                          setSelectedWeaponName(weap.name);
+                          AetheriaAudioEngine.playClick();
+                        }}
+                        className={`w-full text-left p-2.5 rounded-xl border transition-all flex items-center justify-between cursor-pointer ${
+                          isSelected
+                            ? 'bg-slate-800 border-slate-705 shadow text-slate-100 border-slate-700'
+                            : 'bg-slate-900/30 border-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          {/* Rarity-colored badge indicator */}
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs text-slate-950 ${
+                            weap.rarity === 5 ? 'bg-gradient-to-tr from-amber-600 to-amber-350' :
+                            weap.rarity === 4 ? 'bg-gradient-to-tr from-purple-600 to-purple-400 text-white' :
+                            'bg-gradient-to-tr from-blue-600 to-blue-400 text-white'
+                          }`}>
+                            {weap.name.charAt(0)}
+                          </div>
+                          <div>
+                            <div className="font-bold text-xs flex items-center gap-1">
+                              {weap.name}
+                            </div>
+                            <div className="text-[9px] font-semibold text-slate-400">
+                              {weap.weaponType} • {weap.rarity}★
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  });
+                })()}
               </div>
 
               {/* Weapon Detail stats layout */}

@@ -122,6 +122,7 @@ export interface SaveState {
   gachaPity4Star: number;
   bannerPity5Star?: Record<string, number>; // bannerId -> pity
   bannerPity4Star?: Record<string, number>; // bannerId -> pity
+  bannerGuaranteed5Star?: Record<string, boolean>; // bannerId -> guaranteed next is featured
   stats: {
     totalPulls: number;
     totalEnemiesDefeated: number;

@@ -102,6 +102,24 @@ const REACTIONS_LIST: ReactionDetails[] = [
     desc: 'Swirl spreads the target\'s existing element condition to all nearby slimes, preparing them for grand reaction chainings.',
     colorClass: 'from-emerald-400/20 to-teal-500/25 text-emerald-300',
     badgeBorder: 'border-emerald-400/30'
+  },
+  {
+    name: 'Melt',
+    elements: ['Cryo', 'Pyro'],
+    multiplier: '2.0x Damage Multiplier',
+    effect: 'Thermal Liquefaction',
+    desc: 'Melts Cryo armor or targets with Pyro heat, amplifying the triggering attack to deal double damage.',
+    colorClass: 'from-orange-500/20 to-yellow-600/25 text-orange-350',
+    badgeBorder: 'border-orange-400/30'
+  },
+  {
+    name: 'Electro-Charged',
+    elements: ['Hydro', 'Electro'],
+    multiplier: '+300 Flat Damage + Chains',
+    effect: 'Continuous Electrical Discharge',
+    desc: 'Electrifies a wet target, dealing additional damage and propagating chain-shocks to up to 3 adjacent slimes.',
+    colorClass: 'from-purple-500/20 to-blue-500/25 text-indigo-400',
+    badgeBorder: 'border-indigo-400/30'
   }
 ];
 

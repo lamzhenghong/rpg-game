@@ -10,6 +10,7 @@ import { WEAPONS_DATABASE } from '../data/weapons';
 import { PlayableCharacter, ElementType, Weapon } from '../types';
 import { Sparkles, Coins, HelpCircle, History, RefreshCw, Star, X, Info, Shield, Sword, Eye, Sparkle } from 'lucide-react';
 import { AetheriaAudioEngine } from '../utils/audio';
+import { LanguageType, t } from '../utils/i18n';
 import aureliaBanner from '../../assets/aurelia_banner.png';
 import kaelenBanner from '../../assets/kaelen_banner.png';
 import weaponBanner from '../../assets/weapon_banner.png';
@@ -271,11 +272,13 @@ interface GachaSimulatorProps {
   onAddWeapon?: (weapon: Weapon) => void;
   bannerPity5Star: Record<string, number>;
   bannerPity4Star: Record<string, number>;
-  onUpdatePity: (bannerId: string, pity5: number, pity4: number) => void;
+  bannerGuaranteed5Star: Record<string, boolean>;
+  onUpdatePity: (bannerId: string, pity5: number, pity4: number, guaranteed5?: boolean) => void;
   onLogPulls: (items: { name: string; rarity: number }[]) => void;
   pullHistoryList: { name: string; rarity: number; time: string }[];
   onShowAlert: (msg: string, solution?: string, type?: 'success' | 'error' | 'info') => void;
   devCheatsEnabled?: boolean;
+  language?: LanguageType;
 }
 
 interface BannerDetails {
@@ -347,11 +350,13 @@ export default function GachaSimulator({
   onAddWeapon,
   bannerPity5Star,
   bannerPity4Star,
+  bannerGuaranteed5Star = {},
   onUpdatePity,
   onLogPulls,
   pullHistoryList,
   onShowAlert,
-  devCheatsEnabled = true
+  devCheatsEnabled = true,
+  language = 'en'
 }: GachaSimulatorProps) {
   const [selectedBannerIdx, setSelectedBannerIdx] = useState(0);
   const [pulling, setPulling] = useState(false);
@@ -472,6 +477,7 @@ export default function GachaSimulator({
     
     let localPity5 = activePity5;
     let localPity4 = activePity4;
+    let localGuaranteed5 = bannerGuaranteed5Star[activeBanner.id] ?? false;
     let maxRarity = 3;
     const results: { id: string; name: string; rarity: number; isCharacter: boolean; element?: ElementType }[] = [];
     const pullsToLog: { name: string; rarity: number }[] = [];
@@ -497,25 +503,32 @@ export default function GachaSimulator({
 
         if (activeBanner.type === 'character') {
           isChar = true;
-          // 50% chance to fetch featured 5 star
-          if (Math.random() < 0.5) {
+          const isGuaranteed = localGuaranteed5;
+          
+          if (isGuaranteed || Math.random() < 0.5) {
             const chosen = PLAYABLE_CHARACTERS.find(c => c.id === activeBanner.featured5StarId);
             if (chosen) {
               rolledId = chosen.id;
               rolledName = chosen.name;
               element = chosen.element;
             }
-          }
-          
-          if (!rolledId) {
-            // Roll any random standard 5-star character (other than featured)
-            const standardFiveStars = PLAYABLE_CHARACTERS.filter(c => c.rarity === 5 && c.id !== activeBanner.featured5StarId);
+            localGuaranteed5 = false;
+          } else {
+            // Roll any random standard 5-star character (other than featured, and excluding kaelen on aurelia's banner / aurelia on kaelen's banner)
+            const standardFiveStars = PLAYABLE_CHARACTERS.filter(c => 
+              c.rarity === 5 && 
+              c.id !== activeBanner.featured5StarId &&
+              (activeBanner.featured5StarId !== 'aurelia' || c.id !== 'kaelen') &&
+              (activeBanner.featured5StarId !== 'kaelen' || c.id !== 'aurelia')
+            );
             const chosen = standardFiveStars.length > 0 
               ? standardFiveStars[Math.floor(Math.random() * standardFiveStars.length)]
               : PLAYABLE_CHARACTERS.find(c => c.id === activeBanner.featured5StarId)!;
             rolledId = chosen.id;
             rolledName = chosen.name;
             element = chosen.element;
+            
+            localGuaranteed5 = true;
           }
         } else {
           // WEAPON CUSTOM BANNER: 100% Guaranteed self-selected 5★ Weapon drop!
@@ -586,7 +599,7 @@ export default function GachaSimulator({
 
     onLogPulls(pullsToLog);
     setMaxRarityInPull(maxRarity);
-    onUpdatePity(activeBanner.id, localPity5, localPity4);
+    onUpdatePity(activeBanner.id, localPity5, localPity4, localGuaranteed5);
     setCurrentPullResults(results);
 
     // Meteor delay triggers elegant splash display
@@ -1024,6 +1037,11 @@ export default function GachaSimulator({
                   <span className={`text-[8.5px] font-bold tracking-tight font-mono uppercase ${activePity5 >= 75 ? 'text-amber-400 animate-pulse' : 'text-slate-400'}`}>
                     {activePity5 >= 75 ? '⚠️ SOFT PITY ACTIVE' : `${90 - activePity5} to guaranteed`}
                   </span>
+                  {activeBanner.type === 'character' && (
+                    <span className={`text-[8.5px] font-bold tracking-tight font-mono uppercase mt-0.5 ${bannerGuaranteed5Star[activeBanner.id] ? 'text-emerald-400 font-extrabold' : 'text-slate-500'}`}>
+                      {bannerGuaranteed5Star[activeBanner.id] ? '✨ NEXT 5★ GUARANTEED FEATURED' : '⚖️ 50/50 FEATURED CHANCE'}
+                    </span>
+                  )}
                 </div>
               </div>
 

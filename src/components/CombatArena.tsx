@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AetheriaAudioEngine } from '../utils/audio';
+import { LanguageType, t } from '../utils/i18n';
 import { getAccumulatedPortraitBuffs } from '../utils/portraits';
 import { WEAPONS_DATABASE } from '../data/weapons';
 import MobileJoystick from './MobileJoystick';
@@ -40,6 +41,8 @@ interface CombatArenaProps {
   devCheatsEnabled?: boolean;
   screenShakeEnabled?: boolean;
   combatSpeed?: number;
+  fpsLimit?: '60' | 'none';
+  language?: LanguageType;
   // Rogue-like Dungeon mode props
   dungeonMode?: boolean;
   dungeonBuffs?: string[];
@@ -190,6 +193,8 @@ export default function CombatArena({
   devCheatsEnabled = true,
   screenShakeEnabled = true,
   combatSpeed = 1.0,
+  fpsLimit = '60',
+  language = 'en',
   dungeonMode = false,
   dungeonBuffs = [],
   dungeonPartyHp = {},
@@ -409,7 +414,8 @@ export default function CombatArena({
     isPaused,
     isGameOver,
     battleStarted: false,
-    countdownValue: null as number | null
+    countdownValue: null as number | null,
+    fpsLimit
   });
 
   // Screenshake ref
@@ -430,9 +436,10 @@ export default function CombatArena({
       isPaused,
       isGameOver,
       battleStarted,
-      countdownValue
+      countdownValue,
+      fpsLimit
     };
-  }, [combatParty, activePartyIndex, isParrying, isDashing, shieldActive, shieldWeight, dimensions, timeDisordered, activeChar, isPaused, isGameOver, battleStarted, countdownValue]);
+  }, [combatParty, activePartyIndex, isParrying, isDashing, shieldActive, shieldWeight, dimensions, timeDisordered, activeChar, isPaused, isGameOver, battleStarted, countdownValue, fpsLimit]);
 
   // Start music loop once battle starts
   useEffect(() => {
@@ -1303,13 +1310,47 @@ export default function CombatArena({
         enemy.y += Math.sin(pushAngle) * 50;
         enemy.activeElements = [];
       }
-      // Cryo + Electro = Superconduct
+      // Cryo + Pyro = Melt (2x damage)
+      else if ((activeDebuffs.includes('Cryo') && type === 'Pyro') || (activeDebuffs.includes('Pyro') && type === 'Cryo')) {
+        finalDmg *= 2;
+        reactionName = 'MELT (2x!)';
+        damageColor = '#f59e0b';
+        onIncrementStat('reactions');
+        enemy.activeElements = [];
+      }
+      // Hydro + Electro = Electro-Charged (Continuous tick shock & chain)
+      else if ((activeDebuffs.includes('Hydro') && type === 'Electro') || (activeDebuffs.includes('Electro') && type === 'Hydro')) {
+        finalDmg += 300;
+        reactionName = '⚡ ELECTRO-CHARGED ⚡';
+        damageColor = '#a855f7';
+        onIncrementStat('reactions');
+        enemy.activeElements = [];
+
+        // Spark chains to nearby targets
+        let shockCount = 0;
+        enemiesRef.current.forEach(other => {
+          if (other.id !== enemy.id && other.hp > 0 && shockCount < 3) {
+            const dist = Math.hypot(other.x - enemy.x, other.y - enemy.y);
+            if (dist < 150) {
+              shockCount++;
+              const chainDmg = 250;
+              other.hp = Math.max(0, other.hp - chainDmg);
+              spawnTextRef.current(other.x, other.y - 12, `${chainDmg} ⚡`, '#a855f7', 10);
+              if (!other.activeElements.includes('Electro')) {
+                other.activeElements.push('Electro');
+              }
+            }
+          }
+        });
+      }
+      // Cryo + Electro = Superconduct (DEF Shred applied)
       else if ((activeDebuffs.includes('Cryo') && type === 'Electro') || (activeDebuffs.includes('Electro') && type === 'Cryo')) {
         finalDmg += 200;
         reactionName = '⚡ SUPERCONDUCT (DEF SHRED) ⚡';
         damageColor = '#c084fc';
         onIncrementStat('reactions');
         enemy.activeElements = [];
+        enemy.defShredTimer = 300; // 5 seconds at 60 FPS
       }
       // Dendro + Pyro = Burning
       else if ((activeDebuffs.includes('Dendro') && type === 'Pyro') || (activeDebuffs.includes('Pyro') && type === 'Dendro')) {
@@ -1327,7 +1368,7 @@ export default function CombatArena({
         onIncrementStat('reactions');
         enemy.activeElements = [];
       }
-      // Anemo + any Element = Swirl spreads
+      // Anemo + any Element = Swirl spreads and consumes elements
       else if (type === 'Anemo') {
         const swirledElement = activeDebuffs[0];
         reactionName = '🌀 SWIRL SPLASH! 🌀';
@@ -1346,6 +1387,8 @@ export default function CombatArena({
             }
           }
         });
+
+        enemy.activeElements = []; // consume swirled element
       }
     } else if (!activeDebuffs.includes(type) && source !== 'basic') {
       // Only skills and ultimates apply element statuses — basic attacks do not stack new debuffs
@@ -1358,6 +1401,11 @@ export default function CombatArena({
       shakeRef.current.intensity = intensity;
       shakeRef.current.x = (Math.random() - 0.5) * intensity;
       shakeRef.current.y = (Math.random() - 0.5) * intensity;
+    }
+
+    // Apply Superconduct DEF Shred damage multiplier (+40% DMG)
+    if (enemy.defShredTimer && enemy.defShredTimer > 0) {
+      finalDmg = Math.round(finalDmg * 1.4);
     }
 
     // Decrease enemy HP
@@ -1462,6 +1510,7 @@ export default function CombatArena({
   // Main Loop logic animation
   useEffect(() => {
     let animationId: number;
+    let lastFrameTime = performance.now();
     const ctx = canvasRef.current?.getContext('2d');
 
     const updateGameLoop = () => {
@@ -1477,13 +1526,29 @@ export default function CombatArena({
         isPaused: currentIsPaused,
         isGameOver: currentIsGameOver,
         battleStarted: currentBattleStarted,
-        countdownValue: currentCountdownValue
+        countdownValue: currentCountdownValue,
+        fpsLimit: currentFpsLimit
       } = loopStateRef.current;
 
       const currentActiveChar = currentParty[currentPartyIndex] || null;
       if (!ctx || !canvasRef.current || !currentActiveChar) {
         animationId = requestAnimationFrame(updateGameLoop);
         return;
+      }
+
+      const now = performance.now();
+      const delta = now - lastFrameTime;
+      const targetDelta = 1000 / 60; // 16.666ms
+
+      if (currentFpsLimit === '60') {
+        if (delta < targetDelta) {
+          animationId = requestAnimationFrame(updateGameLoop);
+          return;
+        }
+        // Adjust lastFrameTime to stay in sync
+        lastFrameTime = now - (delta % targetDelta);
+      } else {
+        lastFrameTime = now;
       }
 
       if (!currentBattleStarted || currentIsPaused || currentIsGameOver || currentCountdownValue !== null) {
@@ -1814,6 +1879,20 @@ export default function CombatArena({
       enemiesRef.current.forEach(enemy => {
         if (enemy.hp <= 0) return;
 
+        // Apply Superconduct DEF Shred timer checks
+        if (enemy.defShredTimer && enemy.defShredTimer > 0) {
+          enemy.defShredTimer -= 1 * combatSpeed;
+          // Draw a dotted purple ring around shred-debuffed enemies
+          ctx.save();
+          ctx.strokeStyle = '#c084fc';
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          ctx.arc(enemy.x, enemy.y, enemy.radius + 8, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+
         // Check freeze status bypass
         if (enemy.isFrozen > 0) {
           enemy.isFrozen -= 1;
@@ -2049,6 +2128,105 @@ export default function CombatArena({
         }
         ctx.restore();
       }
+
+      // --- DRAW MINI-MAP OVERLAY (Screen Space, Top-Right) ---
+      const mapSize = 90; // compact size to fit layout perfectly
+      const mapRadius = mapSize / 2;
+      const mapX = dimensions.width - mapSize - 15;
+      const mapY = isMobile ? 55 : 70; // Below the top HUD bar
+      const centerX = mapX + mapRadius;
+      const centerY = mapY + mapRadius;
+
+      ctx.save();
+      // Draw circular clip path
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, mapRadius, 0, Math.PI * 2);
+      ctx.clip();
+
+      // Semi-transparent dark slate background
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.fillRect(mapX, mapY, mapSize, mapSize);
+
+      // Grid lines (500px spacing in world space)
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+      ctx.lineWidth = 1;
+      for (let g = 500; g < 2000; g += 500) {
+        const gx = mapX + (g / 2000) * mapSize;
+        ctx.beginPath();
+        ctx.moveTo(gx, mapY);
+        ctx.lineTo(gx, mapY + mapSize);
+        ctx.stroke();
+
+        const gy = mapY + (g / 2000) * mapSize;
+        ctx.beginPath();
+        ctx.moveTo(mapX, gy);
+        ctx.lineTo(mapX + mapSize, gy);
+        ctx.stroke();
+      }
+
+      // Draw active enemies
+      enemiesRef.current.forEach(enemy => {
+        if (enemy.hp > 0) {
+          const ex = enemy.x;
+          const ey = enemy.y;
+          const enemyMapX = mapX + (ex / 2000) * mapSize;
+          const enemyMapY = mapY + (ey / 2000) * mapSize;
+          
+          if (enemy.type === 'Boss') {
+            ctx.fillStyle = '#f97316'; // Orange for boss
+            ctx.beginPath();
+            ctx.arc(enemyMapX, enemyMapY, 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.strokeStyle = 'rgba(249, 115, 22, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(enemyMapX, enemyMapY, 6.5, 0, Math.PI * 2);
+            ctx.stroke();
+          } else {
+            ctx.fillStyle = '#ef4444'; // Red for normal enemies
+            ctx.beginPath();
+            ctx.arc(enemyMapX, enemyMapY, 2.2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      });
+
+      // Draw player dot
+      const px = playerRef.current.x;
+      const py = playerRef.current.y;
+      const playerMapX = mapX + (px / 2000) * mapSize;
+      const playerMapY = mapY + (py / 2000) * mapSize;
+      
+      ctx.fillStyle = '#10b981'; // Green for player
+      ctx.beginPath();
+      ctx.arc(playerMapX, playerMapY, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Subtle pulse around player
+      ctx.strokeStyle = 'rgba(16, 185, 129, 0.4)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(playerMapX, playerMapY, 4.5 + Math.sin(Date.now() / 150) * 1.2, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.restore(); // Restore clipping region
+
+      // Mini-map border
+      ctx.save();
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, mapRadius, 0, Math.PI * 2);
+      ctx.stroke();
+      
+      // Compass label
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.font = 'bold 7px monospace';
+      ctx.textBaseline = 'middle';
+      ctx.textAlign = 'center';
+      ctx.fillText('N', centerX, mapY + 7);
+      ctx.restore();
 
       animationId = requestAnimationFrame(updateGameLoop);
     };
@@ -2592,11 +2770,11 @@ export default function CombatArena({
         {isPaused && (
           <div className="absolute inset-0 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center z-50">
             <div className="bg-slate-900 border border-white/10 rounded-xl p-6 max-w-sm w-full text-center space-y-5 shadow-2xl">
-              <h3 className="text-lg font-black text-slate-105 font-display tracking-widest uppercase flex items-center justify-center gap-2">
-                <Pause className="w-5 h-5 text-red-500" /> TIME SUSPENDED
+              <h3 className="text-lg font-black text-slate-100 font-display tracking-widest uppercase flex items-center justify-center gap-2">
+                <Pause className="w-5 h-5 text-red-500" /> {t('paused', language)}
               </h3>
               <p className="text-slate-400 text-xs uppercase font-mono">
-                Current Wave: {currentWave} • Points: {gameScore}
+                {t('wave', language)}: {currentWave} • {t('score', language)}: {gameScore}
               </p>
               
               <div className="border border-white/5 bg-black/30 p-3 rounded-lg text-left text-[10px] text-slate-400 space-y-1 font-mono">
@@ -2613,7 +2791,7 @@ export default function CombatArena({
                   }}
                   className="w-full p-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs rounded-lg font-black uppercase tracking-wider cursor-pointer"
                 >
-                  RESUME CAMPAIGN
+                  {t('resume', language)}
                 </button>
                 <button
                   onClick={() => {
@@ -2622,7 +2800,7 @@ export default function CombatArena({
                   }}
                   className="w-full p-2.5 bg-black/45 hover:bg-black/75 border border-white/10 text-slate-200 text-xs rounded-lg font-black uppercase tracking-wider cursor-pointer"
                 >
-                  RESTART WAVE {currentWave}
+                  {t('restart', language)} {t('wave', language)} {currentWave}
                 </button>
                 {onBackToMenu && (
                   <button
@@ -2632,7 +2810,7 @@ export default function CombatArena({
                     }}
                     className="w-full p-2.5 bg-red-650/20 hover:bg-red-600/30 border border-red-500/20 text-red-400 text-xs rounded-lg font-black uppercase tracking-wider cursor-pointer flex items-center justify-center gap-1.5"
                   >
-                    <Home className="w-3.5 h-3.5" /> RETURN TO HOME MENU
+                    <Home className="w-3.5 h-3.5" /> {t('back_to_menu', language)}
                   </button>
                 )}
                 {onExitToWiki && (
@@ -2643,7 +2821,7 @@ export default function CombatArena({
                     }}
                     className="w-full p-2.5 bg-sky-955/20 hover:bg-sky-600/30 border border-sky-500/20 text-sky-400 text-xs rounded-lg font-black uppercase tracking-wider cursor-pointer flex items-center justify-center gap-1.5"
                   >
-                    <BookOpen className="w-3.5 h-3.5" /> EXIT TO WIKI
+                    <BookOpen className="w-3.5 h-3.5" /> {t('exit_to_wiki', language)}
                   </button>
                 )}
 
@@ -2654,12 +2832,12 @@ export default function CombatArena({
                     </div>
                     <div className="space-y-1">
                       <h4 className="text-xs font-black text-amber-400 uppercase tracking-widest">
-                        Are you sure?
+                        {t('misclick_notice', language)}
                       </h4>
                       <p className="text-[10px] text-slate-300 max-w-[200px] leading-relaxed">
-                        {pendingAction === 'restart' && `Restart wave ${currentWave}? This resets your active wave progress.`}
-                        {pendingAction === 'home' && "Return to home menu? This forfeits your current run."}
-                        {pendingAction === 'wiki' && "Exit to GDD Wiki? This forfeits your current run."}
+                        {pendingAction === 'restart' && t('notice_restart', language)}
+                        {pendingAction === 'home' && t('notice_home', language)}
+                        {pendingAction === 'wiki' && t('notice_wiki', language)}
                       </p>
                     </div>
                     <div className="flex gap-2 w-full max-w-[220px]">
@@ -2681,7 +2859,7 @@ export default function CombatArena({
                         }}
                         className="flex-1 py-1.5 bg-red-650 hover:bg-red-600 text-white text-[10px] rounded font-black uppercase tracking-wider cursor-pointer active:scale-95 transition-transform"
                       >
-                        Confirm
+                        {t('confirm', language)}
                       </button>
                       <button
                         onClick={() => {
@@ -2690,7 +2868,7 @@ export default function CombatArena({
                         }}
                         className="flex-1 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-200 text-[10px] rounded font-black uppercase tracking-wider cursor-pointer active:scale-95 transition-transform"
                       >
-                        Cancel
+                        {t('cancel', language)}
                       </button>
                     </div>
                   </div>
