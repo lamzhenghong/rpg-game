@@ -19,58 +19,58 @@ export default function LoginRewardModal({ isOpen, onClose, claimedDays, onClaim
   const REWARDS_INFO = [
     {
       day: 1,
-      title: '4-Star Epic Hero',
-      desc: 'Unlock a random powerful 4-Star companion.',
+      title: '4-Star Hero',
+      desc: 'Get a random 4-Star companion.',
       icon: <Gift className="w-6 h-6 text-indigo-400 group-hover:scale-110 transition-transform" />,
-      tag: 'HERO UNLOCK',
+      tag: 'HERO',
       colorClass: 'from-indigo-900/40 to-slate-900/60 border-indigo-500/30'
     },
     {
       day: 2,
-      title: '4-Star Epic Weapon',
-      desc: 'Boost combat output with a random 4-Star steel armament.',
+      title: '4-Star Weapon',
+      desc: 'Get a random 4-Star weapon.',
       icon: <Shield className="w-6 h-6 text-purple-400 group-hover:scale-110 transition-transform" />,
-      tag: 'WEAPON UNLOCK',
+      tag: 'WEAPON',
       colorClass: 'from-purple-900/40 to-slate-900/60 border-purple-500/30'
     },
     {
       day: 3,
-      title: '3,000 Aether Gems',
-      desc: 'Spend wishes to unlock limited banners immediately.',
+      title: '3,000 Gems',
+      desc: 'Wishes for gacha summons.',
       icon: <Sparkles className="w-6 h-6 text-sky-400" />,
-      tag: 'CURRENCY',
+      tag: 'GEMS',
       colorClass: 'from-sky-900/40 to-slate-900/60 border-sky-500/35'
     },
     {
       day: 4,
-      title: '20,000 Mora Gold',
-      desc: 'Mora is needed for level caps and weapon reforging.',
+      title: '20,000 Mora',
+      desc: 'Gold currency for upgrades.',
       icon: <Coins className="w-6 h-6 text-yellow-500" />,
-      tag: 'GOLD COINS',
+      tag: 'MORA',
       colorClass: 'from-yellow-900/30 to-slate-900/60 border-yellow-500/25'
     },
     {
       day: 5,
-      title: '50,000 Mora Gold',
-      desc: 'Upgrade resources to complete higher wave combat milestones.',
+      title: '50,000 Mora',
+      desc: 'Gold currency for upgrades.',
       icon: <Coins className="w-6 h-6 text-amber-500" />,
-      tag: 'GOLD COINS',
+      tag: 'MORA',
       colorClass: 'from-amber-900/30 to-slate-900/60 border-amber-500/25'
     },
     {
       day: 6,
-      title: '5,000 Aether Gems',
-      desc: 'Almost 30 entire wish summons absolute grant!',
+      title: '5,000 Gems',
+      desc: 'Wishes for gacha summons.',
       icon: <Sparkles className="w-6 h-6 text-pink-400 animate-pulse" />,
-      tag: 'MEGA GEMS',
+      tag: 'GEMS',
       colorClass: 'from-pink-900/40 to-slate-900/60 border-pink-500/30'
     },
     {
       day: 7,
-      title: '🌟 5-Star Divine Hero',
-      desc: 'A random NOT-LIMITED Legend God in your roster forever!',
+      title: '5-Star Deity',
+      desc: 'Guaranteed 5-Star Deity.',
       icon: <Star className="w-7 h-7 text-amber-400 fill-amber-400 animate-bounce" />,
-      tag: 'LEGEND UNIT',
+      tag: 'LEGEND',
       colorClass: 'from-amber-500/20 via-slate-900/70 to-yellow-905/30 border-amber-400/40 shadow-[0_0_15px_rgba(251,191,36,0.15)]'
     }
   ];
@@ -152,9 +152,9 @@ export default function LoginRewardModal({ isOpen, onClose, claimedDays, onClaim
                   )}
 
                   {/* Day marker */}
-                  <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                    <span className="text-xs font-black font-display text-white">DAY {day}</span>
-                    <span className="text-[7.5px] font-mono uppercase bg-white/5 text-slate-400 px-1.5 py-0.5 rounded leading-none font-bold">
+                  <div className="flex flex-row justify-between items-center border-b border-white/5 pb-2 w-full gap-1 whitespace-nowrap overflow-hidden">
+                    <span className="text-xs font-black font-display text-white shrink-0">DAY {day}</span>
+                    <span className="text-[7px] font-mono uppercase bg-white/5 text-slate-400 px-1.5 py-0.5 rounded leading-none font-bold shrink-0">
                       {reward.tag}
                     </span>
                   </div>
@@ -203,17 +203,6 @@ export default function LoginRewardModal({ isOpen, onClose, claimedDays, onClaim
               👑 <b>PRO TIP:</b> Day 1 gives an epic 4-star squad member to boost reaction coverage. Day 7 gives a guaranteed elite non-limited 5-star Deity! Keep logging in or claim sequentially to secure all items. You can re-open this menu anytime by going to **Settings ⚙️ &rarr; LOGIN REWARD**!
             </p>
           </div>
-        </div>
-
-        {/* Footer Actions */}
-        <div className="flex justify-end pt-4 border-t border-white/5 shrink-0">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-2.5 bg-black/50 hover:bg-slate-900 border border-white/10 text-slate-400 hover:text-white font-black text-xs uppercase tracking-widest rounded-lg transition-all cursor-pointer"
-          >
-            Exit Portal
-          </button>
         </div>
       </motion.div>
     </div>

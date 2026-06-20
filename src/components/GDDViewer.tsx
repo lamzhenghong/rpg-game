@@ -143,12 +143,12 @@ export default function GDDViewer({
         </div>
 
         {/* Tabs switcher */}
-        <div className="flex flex-wrap gap-1 bg-black/45 p-1 rounded-lg border border-white/10">
+        <div className="flex overflow-x-auto whitespace-nowrap scrollbar-none gap-1 bg-black/45 p-1 rounded-lg border border-white/10 w-full">
           {(['lore', 'nations', 'characters', 'weapons', 'systems', 'tutorial'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-md transition-all cursor-pointer ${
+              className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-md transition-all cursor-pointer shrink-0 ${
                 activeTab === tab
                   ? 'bg-amber-400 text-[#0f172a] shadow-[0_0_10px_rgba(251,191,36,0.30)]'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'

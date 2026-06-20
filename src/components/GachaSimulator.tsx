@@ -270,6 +270,8 @@ interface GachaSimulatorProps {
   ownedCharacterIds: string[];
   onUnlockCharacter: (id: string) => void;
   onAddWeapon?: (weapon: Weapon) => void;
+  inventoryWeapons?: Weapon[];
+  characterPortraits?: Record<string, number>;
   bannerPity5Star: Record<string, number>;
   bannerPity4Star: Record<string, number>;
   bannerGuaranteed5Star: Record<string, boolean>;
@@ -348,6 +350,8 @@ export default function GachaSimulator({
   ownedCharacterIds,
   onUnlockCharacter,
   onAddWeapon,
+  inventoryWeapons = [],
+  characterPortraits = {},
   bannerPity5Star,
   bannerPity4Star,
   bannerGuaranteed5Star = {},
@@ -360,7 +364,7 @@ export default function GachaSimulator({
 }: GachaSimulatorProps) {
   const [selectedBannerIdx, setSelectedBannerIdx] = useState(0);
   const [pulling, setPulling] = useState(false);
-  const [currentPullResults, setCurrentPullResults] = useState<{ id: string; name: string; rarity: number; isCharacter: boolean; element?: ElementType }[]>([]);
+  const [currentPullResults, setCurrentPullResults] = useState<{ id: string; name: string; rarity: number; isCharacter: boolean; element?: ElementType; isNew?: boolean; nextPortrait?: number | null }[]>([]);
   const [showSplashItem, setShowSplashItem] = useState<{ id: string; name: string; rarity: number; isCharacter: boolean; element?: ElementType } | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [historyPage, setHistoryPage] = useState(1);
@@ -479,7 +483,12 @@ export default function GachaSimulator({
     let localPity4 = activePity4;
     let localGuaranteed5 = bannerGuaranteed5Star[activeBanner.id] ?? false;
     let maxRarity = 3;
-    const results: { id: string; name: string; rarity: number; isCharacter: boolean; element?: ElementType }[] = [];
+
+    const initialOwnedChars = new Set(ownedCharacterIds);
+    const initialOwnedWeapons = new Set(inventoryWeapons.map(w => w.name));
+    const tempPortraits = { ...characterPortraits };
+
+    const results: { id: string; name: string; rarity: number; isCharacter: boolean; element?: ElementType; isNew?: boolean; nextPortrait?: number | null }[] = [];
     const pullsToLog: { name: string; rarity: number }[] = [];
 
     for (let i = 0; i < pullCount; i++) {
@@ -581,7 +590,36 @@ export default function GachaSimulator({
         maxRarity = rolledRarity;
       }
 
-      results.push({ id: rolledId, name: rolledName, rarity: rolledRarity, isCharacter: isChar, element });
+      let isNew = false;
+      let nextPortrait: number | null = null;
+
+      if (isChar && rolledId) {
+        if (!initialOwnedChars.has(rolledId)) {
+          isNew = true;
+          initialOwnedChars.add(rolledId);
+        } else {
+          const currentLvl = tempPortraits[rolledId] || 0;
+          const nextLvl = Math.min(6, currentLvl + 1);
+          tempPortraits[rolledId] = nextLvl;
+          nextPortrait = nextLvl;
+        }
+      } else {
+        // Weapon
+        if (!initialOwnedWeapons.has(rolledName)) {
+          isNew = true;
+          initialOwnedWeapons.add(rolledName);
+        }
+      }
+
+      results.push({
+        id: rolledId,
+        name: rolledName,
+        rarity: rolledRarity,
+        isCharacter: isChar,
+        element,
+        isNew,
+        nextPortrait
+      });
       
       // Handle actual inventory unlocks and transfers in database ledger
       if (isChar && rolledId) {
@@ -602,7 +640,7 @@ export default function GachaSimulator({
     onUpdatePity(activeBanner.id, localPity5, localPity4, localGuaranteed5);
     setCurrentPullResults(results);
 
-    // Meteor delay triggers elegant splash display
+    // Meteor delay triggers elegant gacha results showcase
     setTimeout(() => {
       setAnimationPhase('showcase');
       if (maxRarity >= 4) {
@@ -610,11 +648,12 @@ export default function GachaSimulator({
       } else {
         AetheriaAudioEngine.playWaveClear();
       }
-      const sorted = [...results].sort((a, b) => b.rarity - a.rarity);
-      const highTier = sorted.find(r => r.rarity >= 4);
-      if (highTier) {
-        setShowSplashItem(highTier);
-      }
+      // Fullscreen splash modal disabled per request
+      // const sorted = [...results].sort((a, b) => b.rarity - a.rarity);
+      // const highTier = sorted.find(r => r.rarity >= 4);
+      // if (highTier) {
+      //   setShowSplashItem(highTier);
+      // }
       setPulling(false);
     }, 2200);
   };
@@ -801,6 +840,13 @@ export default function GachaSimulator({
                             : 'bg-slate-900/40 border-white/5 shadow-md hover:border-slate-800'
                       }`}
                     >
+                      {/* NEW! Badge */}
+                      {item.isNew && (
+                        <div className="absolute top-1.5 right-1.5 bg-rose-500 text-white text-[7.5px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider z-20 shadow-sm animate-pulse">
+                          NEW!
+                        </div>
+                      )}
+
                       {/* Element specific glow ripples */}
                       {item.element && (
                         <div className={`absolute -inset-1 opacity-0 group-hover:opacity-10 transition-opacity bg-radial from-current to-transparent pointer-events-none ${elColor}`} />
@@ -834,6 +880,11 @@ export default function GachaSimulator({
                       <div className="space-y-1 z-10 w-full">
                         <span className="text-[10.5px] font-black text-slate-200 block truncate uppercase tracking-tighter w-full">
                           {item.name}
+                          {item.nextPortrait !== undefined && item.nextPortrait !== null && (
+                            <span className="text-amber-400 font-extrabold ml-1">
+                              (P{item.nextPortrait})
+                            </span>
+                          )}
                         </span>
                         <span className={`text-[8px] font-extrabold uppercase tracking-widest block font-mono ${
                           item.element ? elColor : 'text-slate-500'
@@ -1128,16 +1179,28 @@ export default function GachaSimulator({
                           : 'bg-slate-950/45 border-white/5'
                     }`}
                   >
-                    <div className="flex items-center gap-1.5">
-                      <div className={`w-1.5 h-1.5 rounded-full ${
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                      <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                         r.rarity === 5 ? 'bg-amber-400 animate-pulse' : r.rarity === 4 ? 'bg-purple-400' : 'bg-slate-400'
                       }`} />
-                      <span className="text-[11px] font-extrabold text-slate-200 uppercase tracking-tighter truncate max-w-[120px]">{r.name}</span>
+                      <span className="text-[11px] font-extrabold text-slate-200 uppercase tracking-tighter truncate max-w-[110px]">
+                        {r.name}
+                      </span>
+                      {r.nextPortrait !== undefined && r.nextPortrait !== null && (
+                        <span className="text-[9px] text-amber-400 font-black shrink-0">
+                          P{r.nextPortrait}
+                        </span>
+                      )}
+                      {r.isNew && (
+                        <span className="text-[8px] bg-rose-500 text-white font-black px-1 rounded shrink-0 leading-normal animate-pulse">
+                          NEW!
+                        </span>
+                      )}
                     </div>
 
-                    <div className="flex items-center gap-1 bg-black/20 p-1 px-2 rounded">
+                    <div className="flex items-center gap-1 bg-black/20 p-1 px-2 rounded shrink-0">
                       <span className={`text-[8.5px] font-extrabold uppercase tracking-wide font-mono ${getElementColor(r.element)}`}>
-                        {r.element ? r.element : r.rarity === 5 ? '5★ WEAPON' : r.rarity === 4 ? '4★ WEAPON' : '3★ WEAPON'}
+                        {r.element ? r.element : r.rarity === 5 ? '5★' : r.rarity === 4 ? '4★' : '3★'}
                       </span>
                     </div>
                   </motion.div>

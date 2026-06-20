@@ -487,7 +487,9 @@ export default function CombatArena({
     isGameOver,
     battleStarted: false,
     countdownValue: null as number | null,
-    fpsLimit
+    fpsLimit,
+    dungeonBuffs,
+    dungeonMode
   });
 
   // Screenshake ref
@@ -509,9 +511,11 @@ export default function CombatArena({
       isGameOver,
       battleStarted,
       countdownValue,
-      fpsLimit
+      fpsLimit,
+      dungeonBuffs,
+      dungeonMode
     };
-  }, [combatParty, activePartyIndex, isParrying, isDashing, shieldActive, shieldWeight, dimensions, timeDisordered, activeChar, isPaused, isGameOver, battleStarted, countdownValue, fpsLimit]);
+  }, [combatParty, activePartyIndex, isParrying, isDashing, shieldActive, shieldWeight, dimensions, timeDisordered, activeChar, isPaused, isGameOver, battleStarted, countdownValue, fpsLimit, dungeonBuffs, dungeonMode]);
 
   // Start music loop once battle starts
   useEffect(() => {
@@ -680,7 +684,7 @@ export default function CombatArena({
       const firstAliveIdx = list.findIndex(c => c.currentHp > 0);
       setActivePartyIndex(firstAliveIdx !== -1 ? firstAliveIdx : 0);
     }
-  }, [partyIds, characterLevels, characterEquippedWeapon, inventoryWeapons, dungeonMode, dungeonBuffs, dungeonPartyHp, dungeonPartyUlt]);
+  }, [partyIds, characterLevels, characterEquippedWeapon, inventoryWeapons, dungeonMode, dungeonBuffs, dungeonPartyHp, dungeonPartyUlt, characterPortraits]);
 
   // Handle resizing observer
   useEffect(() => {
@@ -977,7 +981,7 @@ export default function CombatArena({
     setStamina(Math.round(staminaRef.current));
 
     // Set cooldown (reduce by 30% if Zephyr Pace is active in Dungeon)
-    const baseCd = dungeonMode && dungeonBuffs.includes('Zephyr Pace') ? 0.7 : 1.0;
+    const baseCd = loopStateRef.current.dungeonMode && loopStateRef.current.dungeonBuffs.includes('Zephyr Pace') ? 0.7 : 1.0;
     dodgeCdRef.current = baseCd;
     setDodgeCd(baseCd);
 
@@ -1134,7 +1138,7 @@ export default function CombatArena({
 
         const has2Hydro = activeResonances.some(r => r.key === 'hydro');
         const resonanceEnergyMult = has2Hydro ? 1.20 : 1.0;
-        const energyMultiplier = (dungeonMode && dungeonBuffs.includes('Recharge Matrix') ? 1.5 : 1.0) * resonanceEnergyMult;
+        const energyMultiplier = (loopStateRef.current.dungeonMode && loopStateRef.current.dungeonBuffs.includes('Recharge Matrix') ? 1.5 : 1.0) * resonanceEnergyMult;
 
         let debateTimerVal = c.debateClubTimer || 0;
         if (c.equippedWeaponName?.includes('Debate Club')) {
@@ -1340,7 +1344,7 @@ export default function CombatArena({
       if (i === currentPartyIndex) {
         const has2Hydro = activeResonances.some(r => r.key === 'hydro');
         const resonanceEnergyMult = has2Hydro ? 1.20 : 1.0;
-        const energyMultiplier = (dungeonMode && dungeonBuffs.includes('Recharge Matrix') ? 1.5 : 1.0) * resonanceEnergyMult;
+        const energyMultiplier = (loopStateRef.current.dungeonMode && loopStateRef.current.dungeonBuffs.includes('Recharge Matrix') ? 1.5 : 1.0) * resonanceEnergyMult;
         const energyGain = (hitSomething ? 2 : 1) * energyMultiplier; // bonus reward for hitting targets
         return { ...c, ultimateEnergy: Math.min(c.ultimateMaxEnergy, c.ultimateEnergy + energyGain) };
       }
@@ -1680,7 +1684,7 @@ export default function CombatArena({
     AetheriaAudioEngine.playHit();
     
     // Apply Vampiric Grace dungeon healing buff (3% of damage)
-    if (dungeonMode && dungeonBuffs.includes('Vampiric Grace')) {
+    if (loopStateRef.current.dungeonMode && loopStateRef.current.dungeonBuffs.includes('Vampiric Grace')) {
       const healAmount = Math.round(finalDmg * 0.03);
       if (healAmount > 0) {
         const { activePartyIndex: currentPartyIndex } = loopStateRef.current;
@@ -2048,10 +2052,10 @@ export default function CombatArena({
       const isShiftHeld = keyboardState.current['shift'];
       const activeWeather = weatherRef.current;
       
-      let runningSpeed = dungeonMode && dungeonBuffs.includes('Zephyr Pace') ? 2.5 * 1.15 : 2.5;
+      let runningSpeed = loopStateRef.current.dungeonMode && loopStateRef.current.dungeonBuffs.includes('Zephyr Pace') ? 2.5 * 1.15 : 2.5;
       
       if (isMoving && isShiftHeld && staminaRef.current > 0) {
-        const sprintRate = dungeonMode && dungeonBuffs.includes('Zephyr Pace') ? 3.8 * 1.15 : 3.8;
+        const sprintRate = loopStateRef.current.dungeonMode && loopStateRef.current.dungeonBuffs.includes('Zephyr Pace') ? 3.8 * 1.15 : 3.8;
         runningSpeed = sprintRate;
         const baseDrain = (15 / 60) * combatSpeed;
         const drainRate = activeWeather === 'Snow' ? baseDrain * 2.5 : baseDrain;
@@ -2323,7 +2327,7 @@ export default function CombatArena({
           // Apply Bulwark Guard rogue-like buff (+40% shield strength) & Geo element resonance (+15%)
           const has2Geo = activeResonances.some(r => r.key === 'geo');
           const geoMult = has2Geo ? 1.15 : 1.0;
-          const baseShield = Math.round((dungeonMode && dungeonBuffs.includes('Bulwark Guard') ? 840 : 600) * geoMult);
+          const baseShield = Math.round((loopStateRef.current.dungeonMode && loopStateRef.current.dungeonBuffs.includes('Bulwark Guard') ? 840 : 600) * geoMult);
           setShieldWeight(baseShield); // Shield HP buffer
           
           spawnFloatingDamageText(
@@ -3058,7 +3062,7 @@ export default function CombatArena({
       const updatedParty = pList.map((c, idx) => {
         if (idx === currentPartyIndex) {
           const nextHp = c.currentHp - amount;
-          if (nextHp <= 0 && dungeonMode && dungeonBuffs.includes('Aetheric Revival') && !hasRevivedRef.current) {
+          if (nextHp <= 0 && loopStateRef.current.dungeonMode && loopStateRef.current.dungeonBuffs.includes('Aetheric Revival') && !hasRevivedRef.current) {
             hasRevivedRef.current = true;
             revived = true;
             return { ...c, currentHp: Math.round(c.maxHp * 0.5) };
@@ -3239,6 +3243,18 @@ export default function CombatArena({
                   className="text-[9px] font-black uppercase px-2 py-0.5 rounded border bg-emerald-500/10 border-emerald-500/35 text-emerald-400 flex items-center gap-1 shadow-sm select-none font-mono"
                 >
                   ✨ {res.name}
+                </span>
+              ))}
+            </div>
+          )}
+          {dungeonMode && dungeonBuffs && dungeonBuffs.length > 0 && (
+            <div className="flex gap-1.5 flex-wrap items-center mt-1.5">
+              {dungeonBuffs.map((buff, bIdx) => (
+                <span 
+                  key={bIdx}
+                  className="text-[9px] font-black uppercase px-2 py-0.5 rounded border bg-indigo-500/10 border-indigo-500/35 text-indigo-400 flex items-center gap-1 shadow-sm select-none font-mono"
+                >
+                  🔮 {buff}
                 </span>
               ))}
             </div>

@@ -667,13 +667,13 @@ export default function App() {
         const charTemplate = PLAYABLE_CHARACTERS.find(c => c.id === id);
         const charName = charTemplate?.name || "Hero";
 
-        setTimeout(() => {
-          showInGameAlert(
-            `✨ DUPLICATE SUMMON: ${charName.toUpperCase()} PORTRAIT UPGRADED!`,
-            `${charName}'s Portrait Level is now P${nextLvl}! (Stats boosted in combat)`,
-            "success"
-          );
-        }, 100);
+        // setTimeout(() => {
+        //   showInGameAlert(
+        //     `✨ DUPLICATE SUMMON: ${charName.toUpperCase()} PORTRAIT UPGRADED!`,
+        //     `${charName}'s Portrait Level is now P${nextLvl}! (Stats boosted in combat)`,
+        //     "success"
+        //   );
+        // }, 100);
 
         return {
           ...prev,
@@ -1932,6 +1932,8 @@ export default function App() {
                     ownedCharacterIds={saveState.unlockedCharacterIds || []}
                     onUnlockCharacter={(id) => handleUnlockCharacter(id)}
                     onAddWeapon={(w) => handleAddWeapon(w)}
+                    inventoryWeapons={saveState.inventoryWeapons || []}
+                    characterPortraits={saveState.characterPortraits || {}}
                     bannerPity5Star={saveState.bannerPity5Star || {}}
                     bannerPity4Star={saveState.bannerPity4Star || {}}
                     bannerGuaranteed5Star={saveState.bannerGuaranteed5Star || {}}
