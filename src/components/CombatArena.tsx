@@ -2436,7 +2436,8 @@ export default function CombatArena({
         )}
 
         {/* Keyboard controllers help tip sheet */}
-        <div className="absolute top-4 left-4 bg-black/80 border border-white/10 p-3 rounded-lg text-[9.5px] text-slate-350 space-y-1.5 backdrop-blur-md z-20 pointer-events-none hidden md:block">
+        {!isMobile && (
+          <div className="absolute top-4 left-4 bg-black/80 border border-white/10 p-3 rounded-lg text-[9.5px] text-slate-350 space-y-1.5 backdrop-blur-md z-20 pointer-events-none hidden md:block">
           <div className="font-black text-amber-400 uppercase tracking-widest border-b border-white/10 pb-1 font-display">DIAGNOSTICS MATRIX</div>
           <div className="flex items-center gap-2 justify-between">
             <span>Movement Vector:</span>
@@ -2471,6 +2472,7 @@ export default function CombatArena({
             <span className="bg-white/10 px-1 py-0.2 rounded font-black text-slate-205 font-mono">1-4</span>
           </div>
         </div>
+        )}
 
         {/* START BATTLE OVERLAY */}
         <AnimatePresence>
@@ -2642,7 +2644,8 @@ export default function CombatArena({
         />
 
         {/* On screen active controls overlay for mobile and clicking explorers */}
-        <div className="hidden md:grid bg-[#060810]/95 border-t border-white/10 p-5 md:p-6 grid-cols-1 md:grid-cols-3 items-center gap-6 z-10 w-full backdrop-blur-md">
+        {!isMobile && (
+          <div className="bg-[#060810]/95 border-t border-white/10 p-5 md:p-6 grid grid-cols-1 md:grid-cols-3 items-center gap-6 z-10 w-full backdrop-blur-md">
           
           {/* Party setup swaps row */}
           <div className="flex gap-3 justify-start">
@@ -2753,12 +2756,13 @@ export default function CombatArena({
             </button>
           </div>
         </div>
+        )}
       </div>
 
       {isMobile && (
         <>
-          {/* Party setup swaps column (floating vertically on the right below HUD) */}
-          <div className="fixed right-4 top-24 z-40 flex flex-col gap-2.5 pointer-events-auto">
+          {/* Party setup swaps column (floating horizontally below HUD) */}
+          <div className="fixed left-4 top-14 z-40 flex flex-row gap-2 pointer-events-auto">
             {combatParty.map((c, i) => {
               const activeRatio = (c.currentHp / c.maxHp) * 100;
               const charTemplate = PLAYABLE_CHARACTERS.find(p => p.id === c.id);
@@ -2768,21 +2772,23 @@ export default function CombatArena({
                   key={c.id}
                   onClick={() => swapPartyIndex(i)}
                   disabled={c.currentHp <= 0 || isCurrent}
-                  className={`p-1.5 rounded-lg border text-center transition-all relative overflow-hidden cursor-pointer w-12 h-12 flex flex-col items-center justify-center ${
+                  className={`p-1.5 px-2 rounded-lg border text-left transition-all relative overflow-hidden cursor-pointer flex items-center gap-2 h-9 ${
                     c.currentHp <= 0
-                      ? 'opacity-40 bg-zinc-950/85 border-red-900 text-slate-600'
+                      ? 'opacity-40 bg-zinc-955 border-red-900 text-slate-600'
                       : isCurrent
                         ? 'bg-indigo-950/80 border-indigo-500 shadow-[0_0_10px_rgba(99,102,241,0.4)]'
-                        : 'bg-slate-950/85 border-white/10 text-slate-405'
+                        : 'bg-slate-950/85 border-white/10 text-slate-400'
                   }`}
                   style={{
                     touchAction: 'none'
                   }}
                   onPointerDown={(e) => e.stopPropagation()} // Stop propagation to canvas
                 >
-                  <span className="text-[9px] font-black uppercase truncate max-w-[42px] text-slate-200">{c.name.substring(0, 4)}</span>
-                  <span className="text-[8px] font-bold text-amber-500 font-mono">L.{c.level}</span>
-                  <div className="w-full bg-black/50 h-1 rounded overflow-hidden mt-1">
+                  <div className="flex flex-col justify-center leading-none">
+                    <span className="text-[9px] font-black uppercase truncate max-w-[42px] text-slate-200">{c.name.substring(0, 4)}</span>
+                    <span className="text-[8px] font-bold text-amber-500 font-mono mt-0.5">L.{c.level}</span>
+                  </div>
+                  <div className="w-8 bg-black/50 h-1.5 rounded-sm overflow-hidden shrink-0">
                     <div 
                       className={`h-full ${activeRatio > 50 ? 'bg-emerald-400' : activeRatio > 20 ? 'bg-amber-400' : 'bg-red-500 shadow-[0_0_5px_red]'}`} 
                       style={{ width: `${activeRatio}%` }} 

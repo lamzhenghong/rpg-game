@@ -439,7 +439,7 @@ export default function RogueDungeon({
         </div>
 
         {/* Right active room action area */}
-        <div className="flex-1 flex flex-col justify-between gap-6">
+        <div className="flex-1 min-w-0 flex flex-col justify-between gap-6">
           
           {/* Header Map Node Tracker */}
           <div className="bg-[#05060b]/45 border border-white/5 p-4 rounded-xl">

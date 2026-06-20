@@ -1881,7 +1881,8 @@ export default function App() {
         </div>
 
         {/* Right Side Column: Quest Tracker and stats summary (takes 1 cell) */}
-        <div className="space-y-6">
+        {!isMobile && (
+          <div className="space-y-6">
           
           {/* Squadron Quest Ledger Sidebar Layout */}
           <SquadronQuestLedger
@@ -2029,6 +2030,7 @@ export default function App() {
           </div>
 
         </div>
+        )}
 
       </main>
 
