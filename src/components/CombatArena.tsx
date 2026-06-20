@@ -1582,19 +1582,11 @@ export default function CombatArena({
       // Decrement dodge and parry cooldowns (scaled by combatSpeed)
       if (dodgeCdRef.current > 0) {
         dodgeCdRef.current = Math.max(0, dodgeCdRef.current - 0.016 * combatSpeed);
-        if (dodgeCdRef.current === 0) {
-          setDodgeCd(0);
-        } else if (Math.random() < 0.15) {
-          setDodgeCd(dodgeCdRef.current);
-        }
+        setDodgeCd(dodgeCdRef.current);
       }
       if (parryCdRef.current > 0) {
         parryCdRef.current = Math.max(0, parryCdRef.current - 0.016 * combatSpeed);
-        if (parryCdRef.current === 0) {
-          setParryCd(0);
-        } else if (Math.random() < 0.15) {
-          setParryCd(parryCdRef.current);
-        }
+        setParryCd(parryCdRef.current);
       }
 
       // Clear Screen
@@ -2817,6 +2809,7 @@ export default function CombatArena({
             onUltimate={triggerUltimate}
             onDodge={triggerDodgeDash}
             onParry={triggerParryBlock}
+            onParryEnd={() => setIsParrying(false)}
             skillCooldown={activeChar?.skillCooldownRemaining || 0}
             dodgeCooldown={dodgeCd}
             parryCooldown={parryCd}
