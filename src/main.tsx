@@ -3,7 +3,7 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
-console.log("RPG GAME: Version 1.1.3 - Grid Mobile controls layout.");
+console.log("RPG GAME: Version 1.1.4 - Mobile cooldown fix.");
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('controllerchange', () => {

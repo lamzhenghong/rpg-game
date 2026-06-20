@@ -1582,15 +1582,19 @@ export default function CombatArena({
       // Decrement dodge and parry cooldowns (scaled by combatSpeed)
       if (dodgeCdRef.current > 0) {
         dodgeCdRef.current = Math.max(0, dodgeCdRef.current - 0.016 * combatSpeed);
-        if (Math.random() < 0.15) setDodgeCd(dodgeCdRef.current);
-      } else if (dodgeCd > 0) {
-        setDodgeCd(0);
+        if (dodgeCdRef.current === 0) {
+          setDodgeCd(0);
+        } else if (Math.random() < 0.15) {
+          setDodgeCd(dodgeCdRef.current);
+        }
       }
       if (parryCdRef.current > 0) {
         parryCdRef.current = Math.max(0, parryCdRef.current - 0.016 * combatSpeed);
-        if (Math.random() < 0.15) setParryCd(parryCdRef.current);
-      } else if (parryCd > 0) {
-        setParryCd(0);
+        if (parryCdRef.current === 0) {
+          setParryCd(0);
+        } else if (Math.random() < 0.15) {
+          setParryCd(parryCdRef.current);
+        }
       }
 
       // Clear Screen
