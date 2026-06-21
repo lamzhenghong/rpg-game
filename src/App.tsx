@@ -198,6 +198,7 @@ export default function App() {
   const [showResonanceSheet, setShowResonanceSheet] = useState(false);
   const [partyElementFilter, setPartyElementFilter] = useState<'All' | ElementType>('All');
   const [partyWeaponFilter, setPartyWeaponFilter] = useState<'All' | 'Sword' | 'Claymore' | 'Polearm' | 'Bow' | 'Catalyst'>('All');
+  const [partyRarityFilter, setPartyRarityFilter] = useState<'All' | 4 | 5>('All');
 
   const partyResonances = React.useMemo(() => {
     const activeChars = PLAYABLE_CHARACTERS.filter(c => saveState.partyIds.includes(c.id));
@@ -2053,7 +2054,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Element & Weapon Class Filter Panel */}
+                    {/* Element, Weapon Class & Rarity Filter Panel */}
                     <div className="flex flex-col xl:flex-row gap-4 justify-between items-start xl:items-center bg-slate-950/40 border border-white/10 p-4 rounded-xl shadow-inner">
                       {/* Element Filters */}
                       <div className="space-y-2 w-full xl:w-auto">
@@ -2107,6 +2108,38 @@ export default function App() {
                                 }`}
                               >
                                 {wp}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Rarity Filters */}
+                      <div className="space-y-2 w-full xl:w-auto">
+                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block font-mono">Filter by Rarity:</span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {[
+                            { value: 'All', label: 'All' },
+                            { value: 4, label: '⭐⭐⭐⭐ 4★' },
+                            { value: 5, label: '⭐⭐⭐⭐⭐ 5★' }
+                          ].map((item) => {
+                            const isSelected = partyRarityFilter === item.value;
+                            let colorClass = 'bg-slate-900/50 border-white/5 text-slate-450 hover:bg-slate-800 hover:text-slate-200';
+                            if (isSelected) {
+                              if (item.value === 'All') colorClass = 'bg-indigo-500/80 border-indigo-400 text-white shadow-[0_0_12px_rgba(99,102,241,0.35)]';
+                              else if (item.value === 4) colorClass = 'bg-purple-950/80 border-purple-500 text-purple-400 shadow-[0_0_12px_rgba(168,85,247,0.35)]';
+                              else if (item.value === 5) colorClass = 'bg-amber-950/80 border-amber-500 text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.35)]';
+                            }
+                            return (
+                              <button
+                                key={item.label}
+                                onClick={() => {
+                                  AetheriaAudioEngine.playClick();
+                                  setPartyRarityFilter(item.value as any);
+                                }}
+                                className={`px-3 py-1.5 text-[10px] font-black uppercase rounded-lg border transition-all cursor-pointer select-none active:scale-95 ${colorClass}`}
+                              >
+                                {item.label}
                               </button>
                             );
                           })}
@@ -2213,7 +2246,8 @@ export default function App() {
                                                c.weaponType.toLowerCase().includes(query);
                           const matchesElement = partyElementFilter === 'All' || c.element === partyElementFilter;
                           const matchesWeapon = partyWeaponFilter === 'All' || c.weaponType === partyWeaponFilter;
-                          return matchesQuery && matchesElement && matchesWeapon;
+                          const matchesRarity = partyRarityFilter === 'All' || c.rarity === partyRarityFilter;
+                          return matchesQuery && matchesElement && matchesWeapon && matchesRarity;
                         });
 
                         if (filteredCharacters.length === 0) {
