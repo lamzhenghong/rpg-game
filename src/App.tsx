@@ -512,19 +512,33 @@ export default function App() {
     AetheriaAudioEngine.setMute(muteSfx);
   }, [muteSfx]);
 
-  // Auto-start BGM on the very first user interaction (click or touch anywhere)
-  // Browsers require a user gesture before audio can play — this hooks that gesture.
+  // Auto-start BGM on mount or the very first user interaction (click, touch, keypress, mousemove, etc.)
+  // Browsers require a user gesture before audio can play — this hooks all possible gestures.
   useEffect(() => {
+    // Attempt autoplay immediately (may succeed if permission was already granted previously)
+    AetheriaAudioEngine.resume();
+    AetheriaAudioEngine.startMusic();
+
     const startOnFirstInteraction = () => {
+      AetheriaAudioEngine.resume();
       AetheriaAudioEngine.startMusic();
-      document.removeEventListener('click', startOnFirstInteraction);
-      document.removeEventListener('touchstart', startOnFirstInteraction);
+      cleanupListeners();
     };
-    document.addEventListener('click', startOnFirstInteraction);
-    document.addEventListener('touchstart', startOnFirstInteraction);
+
+    const cleanupListeners = () => {
+      window.removeEventListener('click', startOnFirstInteraction);
+      window.removeEventListener('touchstart', startOnFirstInteraction);
+      window.removeEventListener('keydown', startOnFirstInteraction);
+      window.removeEventListener('mousedown', startOnFirstInteraction);
+    };
+
+    window.addEventListener('click', startOnFirstInteraction);
+    window.addEventListener('touchstart', startOnFirstInteraction);
+    window.addEventListener('keydown', startOnFirstInteraction);
+    window.addEventListener('mousedown', startOnFirstInteraction);
+
     return () => {
-      document.removeEventListener('click', startOnFirstInteraction);
-      document.removeEventListener('touchstart', startOnFirstInteraction);
+      cleanupListeners();
     };
   }, []);
 
@@ -643,7 +657,14 @@ export default function App() {
         if (!merged.unlockedDamageSkins) {
           merged.unlockedDamageSkins = ['Default'];
         }
-        if (!merged.activeDamageSkin) {
+        const validSkins = ['Default', 'Ice', 'Void', 'Celestial'];
+        const savedSkins = Array.isArray(merged.unlockedDamageSkins) ? merged.unlockedDamageSkins : ['Default'];
+        merged.unlockedDamageSkins = Array.from(new Set([
+          'Default',
+          ...savedSkins.filter((s: string) => validSkins.includes(s))
+        ]));
+        
+        if (!merged.activeDamageSkin || !validSkins.includes(merged.activeDamageSkin)) {
           merged.activeDamageSkin = 'Default';
         }
         if (merged.lastShopRefreshHour === undefined) {
@@ -2209,11 +2230,7 @@ export default function App() {
               initial={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.8, ease: 'easeInOut' }}
-              className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-2xl animate-fade-in cursor-pointer"
-              onClick={() => {
-                AetheriaAudioEngine.resume();
-                AetheriaAudioEngine.startMusic();
-              }}
+              className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-slate-950/85 backdrop-blur-2xl animate-fade-in"
             >
               <div className="flex flex-col items-center gap-6 text-center select-none max-w-sm px-6">
                 {/* Rotating detailed magic circle */}

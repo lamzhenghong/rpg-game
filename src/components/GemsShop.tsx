@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { 
-  Coins, ShoppingBag, Clock, Shield, Sparkles, Flame, Zap, 
+  Coins, ShoppingBag, Clock, Shield, Sparkles,
   Snowflake, Sparkle, BookOpen, Layers, CheckCircle2 
 } from 'lucide-react';
 import { SaveState, Artifact, ArtifactSlot, ArtifactSet } from '../types';
@@ -47,11 +47,8 @@ export interface ShopItem {
 }
 
 export const DAMAGE_SKINS = [
-  { id: 'Flame', name: 'Flame Skin', rarity: 'Common', display: '🔥1000🔥', price: 20000, icon: '🔥', desc: 'Adds fiery particle headers to your damage popups.' },
-  { id: 'Electro', name: 'Electro Skin', rarity: 'Common', display: '⚡1000⚡', price: 20000, icon: '⚡', desc: 'Envelops your combat damage values in pure lightning indicators.' },
-  { id: 'Ice', name: 'Ice Skin', rarity: 'Rare', display: '❄1000❄', price: 30000, icon: '❄', desc: 'Encases all damage popups in frost crystals.' },
+  { id: 'Ice', name: 'Ice Skin', rarity: 'Common', display: '❄1000❄', price: 20000, icon: '❄', desc: 'Encases all damage popups in frost crystals.' },
   { id: 'Void', name: 'Void Skin', rarity: 'Rare', display: '◈1000◈', price: 30000, icon: '◈', desc: 'Gives damage popups an ancient shadow void aura.' },
-  { id: 'Dragon', name: 'Dragon Skin', rarity: 'Legendary', display: '🐉1000🐉', price: 50000, icon: '🐉', desc: 'Summons draconic scales around critical hit numbers.' },
   { id: 'Celestial', name: 'Celestial Skin', rarity: 'Legendary', display: '✦✦1000✦✦', price: 50000, icon: '✦', desc: 'Surrounds critical damage integers in starlight sigils.' }
 ] as const;
 
@@ -87,7 +84,6 @@ export default function GemsShop({ saveState, onUpdateSaveState, onShowAlert }: 
     const rng = new SeededRandom(currentHourBlock);
     const items: ShopItem[] = [];
 
-    const unlockedSkins = saveState.unlockedDamageSkins || ['Default'];
     const addedSkinIds = new Set<string>();
     const addedArtifacts = new Set<string>(); // Tracks "set_slot_rarity"
 
@@ -95,7 +91,7 @@ export default function GemsShop({ saveState, onUpdateSaveState, onShowAlert }: 
     for (let i = 0; i < 2; i++) {
       const rollType = rng.next();
       // Try to sell a Legendary Skin or a 5-Star Artifact
-      const legendarySkins = DAMAGE_SKINS.filter(s => s.rarity === 'Legendary' && !unlockedSkins.includes(s.id) && !addedSkinIds.has(s.id));
+      const legendarySkins = DAMAGE_SKINS.filter(s => s.rarity === 'Legendary' && !addedSkinIds.has(s.id));
       
       if (rollType < 0.5 && legendarySkins.length > 0) {
         // Legendary Skin
@@ -200,7 +196,7 @@ export default function GemsShop({ saveState, onUpdateSaveState, onShowAlert }: 
         });
       } else {
         // Damage Skin (Common or Rare)
-        const availableSkins = DAMAGE_SKINS.filter(s => s.rarity !== 'Legendary' && !unlockedSkins.includes(s.id) && !addedSkinIds.has(s.id));
+        const availableSkins = DAMAGE_SKINS.filter(s => s.rarity !== 'Legendary' && !addedSkinIds.has(s.id));
         if (availableSkins.length > 0) {
           const skin = rng.choice(availableSkins);
           addedSkinIds.add(skin.id);
@@ -214,7 +210,7 @@ export default function GemsShop({ saveState, onUpdateSaveState, onShowAlert }: 
             skinId: skin.id
           });
         } else {
-          // Fallback to a 4-Star Artifact if all common/rare skins are owned or already added
+          // Fallback to a 4-Star Artifact if all common/rare skins are already added
           let set: ArtifactSet = 'Vanguard';
           let slot: ArtifactSlot = 'helmet';
           for (let attempt = 0; attempt < 5; attempt++) {
@@ -242,10 +238,16 @@ export default function GemsShop({ saveState, onUpdateSaveState, onShowAlert }: 
     }
 
     return items;
-  }, [currentHourBlock, saveState.unlockedDamageSkins]);
+  }, [currentHourBlock]);
 
   // Handle Purchasing an Item
   const handlePurchase = (item: ShopItem) => {
+    const unlockedSkins = saveState.unlockedDamageSkins || ['Default'];
+    if (item.type === 'skin' && item.skinId && unlockedSkins.includes(item.skinId)) {
+      onShowAlert('Already Owned!', 'You already own this damage skin.', 'info');
+      return;
+    }
+
     if (saveState.aetherGems < item.price) {
       onShowAlert(`Insufficient Aether Gems! Required: ${item.price} gems.`, 'Earn gems by completing quests or clearing waves.', 'error');
       return;
@@ -334,6 +336,7 @@ export default function GemsShop({ saveState, onUpdateSaveState, onShowAlert }: 
         {shopItems.map((item) => {
           const isPurchased = (saveState.purchasedShopItemIds || []).includes(item.id);
           const canAfford = saveState.aetherGems >= item.price;
+          const isOwnedSkin = item.type === 'skin' && item.skinId && (saveState.unlockedDamageSkins || ['Default']).includes(item.skinId);
           
           let rarityColor = 'text-slate-400 bg-slate-500/5 border-slate-500/20';
           let glowColor = '';
@@ -351,9 +354,7 @@ export default function GemsShop({ saveState, onUpdateSaveState, onShowAlert }: 
           if (item.type === 'material') {
             iconElement = <BookOpen className="w-6 h-6 text-emerald-400" />;
           } else if (item.type === 'skin') {
-            if (item.skinId === 'Flame') iconElement = <Flame className="w-6 h-6 text-red-500 animate-pulse" />;
-            else if (item.skinId === 'Electro') iconElement = <Zap className="w-6 h-6 text-purple-400 animate-pulse" />;
-            else if (item.skinId === 'Ice') iconElement = <Snowflake className="w-6 h-6 text-sky-400" />;
+            if (item.skinId === 'Ice') iconElement = <Snowflake className="w-6 h-6 text-sky-400" />;
             else if (item.skinId === 'Void') iconElement = <Sparkle className="w-6 h-6 text-violet-500" />;
             else iconElement = <Sparkles className="w-6 h-6 text-amber-400" />;
           }
@@ -362,7 +363,7 @@ export default function GemsShop({ saveState, onUpdateSaveState, onShowAlert }: 
             <div 
               key={item.id} 
               className={`border rounded-xl p-4.5 flex flex-col justify-between space-y-4 transition-all relative ${
-                isPurchased 
+                isPurchased || isOwnedSkin
                   ? 'bg-black/25 border-white/5 opacity-55' 
                   : `bg-[#060811]/45 hover:bg-[#070b16]/65 border-white/10 hover:border-white/20 hover:scale-[1.01] ${glowColor}`
               }`}
@@ -403,10 +404,17 @@ export default function GemsShop({ saveState, onUpdateSaveState, onShowAlert }: 
                   <span className="text-[8px] font-black text-slate-500 uppercase tracking-wider pl-0.5">Gems</span>
                 </div>
 
-                {isPurchased ? (
+                 {isPurchased ? (
                   <div className="w-full py-2 bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 rounded-lg flex items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-wider font-mono">
                     <CheckCircle2 className="w-3.5 h-3.5" /> Out of Stock
                   </div>
+                ) : isOwnedSkin ? (
+                  <button
+                    disabled
+                    className="w-full py-2 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-lg flex items-center justify-center gap-1.5 text-[9px] font-black uppercase tracking-wider font-mono cursor-not-allowed"
+                  >
+                    🔒 Owned
+                  </button>
                 ) : (
                   <button
                     onClick={() => handlePurchase(item)}

@@ -93,14 +93,6 @@ function FloatingDamageTextDOM({ t }: FloatingDamageTextDOMProps) {
   let textClass = '';
   
   switch (t.skin) {
-    case 'Flame':
-      skinStyle.fontFamily = '"Impact", "Arial Black", sans-serif';
-      skinStyle.textShadow = '1px 1px 0 #ef4444, -1px -1px 0 #f97316';
-      break;
-    case 'Electro':
-      skinStyle.fontFamily = '"JetBrains Mono", monospace';
-      skinStyle.textShadow = '1px 1px 0 #a855f7, -1px -1px 0 #c084fc';
-      break;
     case 'Ice':
       skinStyle.fontFamily = '"Trebuchet MS", sans-serif';
       skinStyle.textShadow = '1px 1px 0 #38bdf8, -1px -1px 0 #e0f2fe';
@@ -110,11 +102,6 @@ function FloatingDamageTextDOM({ t }: FloatingDamageTextDOMProps) {
       skinStyle.fontFamily = '"Lucida Console", monospace';
       skinStyle.textShadow = '1px 1px 0 #1e1b4b, -1px -1px 0 #d946ef';
       textClass = 'pulse-void-text';
-      break;
-    case 'Dragon':
-      skinStyle.fontFamily = '"Georgia", serif';
-      skinStyle.textShadow = '1px 1px 0 #dc2626, -1px -1px 0 #facc15';
-      if (t.isCrit) textClass = 'roar-text';
       break;
     case 'Celestial':
       skinStyle.fontFamily = '"Georgia", serif';
@@ -151,9 +138,6 @@ function FloatingDamageTextDOM({ t }: FloatingDamageTextDOMProps) {
           }}
           className={`select-none pointer-events-none ${textClass}`}
         >
-          {t.skin === 'Dragon' && (
-            <div className="absolute inset-[-10px] bg-red-950/20 rounded-full blur-md -z-10 animate-pulse pointer-events-none" />
-          )}
           {t.skin === 'Void' && (
             <div className="absolute inset-[-6px] bg-purple-950/30 rounded-full blur-sm -z-10 animate-ping pointer-events-none" style={{ animationDuration: '2s' }} />
           )}
@@ -505,11 +489,8 @@ export default function CombatArena({
     }
     const replaceNumber = (numStr: string) => {
       switch (skin) {
-        case 'Flame': return `🔥${numStr}🔥`;
-        case 'Electro': return `⚡${numStr}⚡`;
         case 'Ice': return `❄${numStr}❄`;
         case 'Void': return `◈${numStr}◈`;
-        case 'Dragon': return `🐉${numStr}🐉`;
         case 'Celestial': return `✦✦${numStr}✦✦`;
         default: return numStr;
       }
@@ -533,20 +514,6 @@ export default function CombatArena({
 
     const formattedText = formatWithDamageSkin(text, activeDamageSkin);
 
-    // 1. Dragon roar screenshake effect on crits (via native DOM class toggle to bypass React render cycle)
-    if (isCrit && activeDamageSkin === 'Dragon') {
-      if (screenShakeEnabled) {
-        shakeRef.current.intensity = 15;
-        shakeRef.current.x = (Math.random() - 0.5) * 15;
-        shakeRef.current.y = (Math.random() - 0.5) * 15;
-      }
-      const arenaEl = document.getElementById('combat-arena-container');
-      if (arenaEl) {
-        arenaEl.classList.add('animate-shake');
-        setTimeout(() => arenaEl.classList.remove('animate-shake'), 450);
-      }
-    }
-
     // 2. Celestial screen flash sparkle effect on crits (via direct overlay DOM style update)
     if (isCrit && activeDamageSkin === 'Celestial') {
       const flashEl = document.getElementById('celestial-flash-overlay');
@@ -565,16 +532,10 @@ export default function CombatArena({
       for (let i = 0; i < count; i++) {
         let pColor = color;
         let pRadius = 2.5;
-        if (activeDamageSkin === 'Flame') {
-          pColor = Math.random() > 0.5 ? '#f97316' : '#ef4444'; // Orange/Red
-        } else if (activeDamageSkin === 'Electro') {
-          pColor = Math.random() > 0.5 ? '#c084fc' : '#a855f7'; // Purple/Indigo
-        } else if (activeDamageSkin === 'Ice') {
+        if (activeDamageSkin === 'Ice') {
           pColor = Math.random() > 0.5 ? '#38bdf8' : '#e0f2fe'; // Blue/Cyan
         } else if (activeDamageSkin === 'Void') {
           pColor = Math.random() > 0.5 ? '#d946ef' : '#1e1b4b'; // Abyssal
-        } else if (activeDamageSkin === 'Dragon') {
-          pColor = Math.random() > 0.5 ? '#dc2626' : '#facc15'; // Fiery red/gold
         } else if (activeDamageSkin === 'Celestial') {
           pColor = Math.random() > 0.5 ? '#fde047' : '#ffffff'; // Gold/white
         }
@@ -4135,19 +4096,17 @@ export default function CombatArena({
                   }}
                   className="w-full p-2.5 bg-black/45 hover:bg-black/75 border border-white/10 text-slate-200 text-xs rounded-lg font-black uppercase tracking-wider cursor-pointer"
                 >
-                  {t('restart', language)} {t('wave', language)} {currentWave}
+                  🔄 {t('restart_wave_1', language)}
                 </button>
-                {onBackToMenu && (
-                  <button
-                    onClick={() => {
-                      AetheriaAudioEngine.playClick();
-                      setPendingAction('home');
-                    }}
-                    className="w-full p-2.5 bg-red-650/20 hover:bg-red-600/30 border border-red-500/20 text-red-400 text-xs rounded-lg font-black uppercase tracking-wider cursor-pointer flex items-center justify-center gap-1.5"
-                  >
-                    <Home className="w-3.5 h-3.5" /> {t('back_to_menu', language)}
-                  </button>
-                )}
+                <button
+                  onClick={() => {
+                    AetheriaAudioEngine.playClick();
+                    setPendingAction('end_run');
+                  }}
+                  className="w-full p-2.5 bg-red-950/20 hover:bg-red-900/30 border border-red-500/20 text-red-400 text-xs rounded-lg font-black uppercase tracking-wider cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  💀 {t('end_run', language)}
+                </button>
                 {onExitToWiki && (
                   <button
                     onClick={() => {
@@ -4170,7 +4129,8 @@ export default function CombatArena({
                         {t('misclick_notice', language)}
                       </h4>
                       <p className="text-[10px] text-slate-300 max-w-[200px] leading-relaxed">
-                        {pendingAction === 'restart' && t('notice_restart', language)}
+                        {pendingAction === 'restart' && t('notice_restart_run', language)}
+                        {pendingAction === 'end_run' && t('notice_end_run', language)}
                         {pendingAction === 'home' && t('notice_home', language)}
                         {pendingAction === 'wiki' && t('notice_wiki', language)}
                       </p>
@@ -4184,6 +4144,14 @@ export default function CombatArena({
                           if (act === 'restart') {
                             setIsPaused(false);
                             handleRestartCombat();
+                          } else if (act === 'end_run') {
+                            setIsPaused(false);
+                            setCombatParty(pList => pList.map(c => ({
+                              ...c,
+                              currentHp: 0
+                            })));
+                            setIsGameOver(true);
+                            AetheriaAudioEngine.playGameOver();
                           } else if (act === 'home') {
                             setIsPaused(false);
                             onBackToMenu?.();

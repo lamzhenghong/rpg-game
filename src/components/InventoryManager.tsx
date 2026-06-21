@@ -123,6 +123,7 @@ export default function InventoryManager({
 }: InventoryManagerProps) {
   const [selectedCharId, setSelectedCharId] = useState<string>(ownedCharacterIds[0] || 'aurelia');
   const [activeTab, setActiveTab] = useState<'weapons' | 'items' | 'characters' | 'artifacts'>('characters');
+  const [salvageConfirmArtifactId, setSalvageConfirmArtifactId] = useState<string | null>(null);
 
   const tabContainerRef = useRef<HTMLDivElement>(null);
 
@@ -1023,10 +1024,7 @@ export default function InventoryManager({
                             onShowAlert("Artifact is Equipped!", "Please unequip this artifact from " + equippedCharName + " before deleting it.", "error");
                             return;
                           }
-                          if (confirm("Are you sure you want to delete and salvage this artifact? This action is permanent and cannot be undone!")) {
-                            onDeleteArtifact && onDeleteArtifact(activeArt.id);
-                            onShowAlert("Artifact Salvaged!", "Successfully salvaged and removed artifact from database registry.", "success");
-                          }
+                          setSalvageConfirmArtifactId(activeArt.id);
                         }}
                         className={`flex-1 font-black text-xs uppercase tracking-widest px-6 py-3 rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer border ${
                           activeArt.isLocked
@@ -1775,6 +1773,51 @@ export default function InventoryManager({
 
         </div>
       </div>
+
+      {salvageConfirmArtifactId && (() => {
+        const art = inventoryArtifacts.find(a => a.id === salvageConfirmArtifactId);
+        if (!art) return null;
+        return (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
+            <div className="bg-[#0b0f19] border border-red-500/30 rounded-xl p-6 max-w-sm w-full text-center space-y-5 shadow-[0_10px_40px_rgba(239,68,68,0.25)]">
+              <div className="w-12 h-12 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mx-auto">
+                <Trash2 className="w-6 h-6 text-red-450 animate-pulse" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-md font-black text-slate-100 uppercase tracking-wider font-display">
+                  Salvage Artifact?
+                </h3>
+                <p className="text-[10.5px] text-slate-350 leading-relaxed font-mono uppercase">
+                  Are you sure you want to delete and salvage <span className="text-red-400 font-extrabold">{art.name}</span>? This action is permanent and cannot be undone!
+                </p>
+              </div>
+              
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={() => {
+                    AetheriaAudioEngine.playClick();
+                    onDeleteArtifact && onDeleteArtifact(art.id);
+                    setSalvageConfirmArtifactId(null);
+                    onShowAlert("Artifact Salvaged!", "Successfully salvaged and removed artifact from database registry.", "success");
+                  }}
+                  className="flex-1 py-2.5 bg-red-650 hover:bg-red-600 text-white text-[10px] rounded-lg font-black uppercase tracking-wider cursor-pointer active:scale-95 transition-transform"
+                >
+                  Confirm
+                </button>
+                <button
+                  onClick={() => {
+                    AetheriaAudioEngine.playClick();
+                    setSalvageConfirmArtifactId(null);
+                  }}
+                  className="flex-1 py-2.5 bg-slate-800 hover:bg-slate-750 text-slate-200 text-[10px] rounded-lg font-black uppercase tracking-wider cursor-pointer active:scale-95 transition-transform border border-white/5"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {isReactionsModalOpen && (
         <ElementalReactionsModal

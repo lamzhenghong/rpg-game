@@ -409,6 +409,30 @@ export const TRANSLATIONS: Record<string, Record<LanguageType, string>> = {
     zh: '重新开始波次？当前波次的进度将会丢失。',
     ko: '다시 시작하시겠습니까? 현재 웨ーブ 진행도가 유실됩니다.'
   },
+  'restart_wave_1': {
+    en: 'Restart Run (Wave 1)',
+    jp: '再起動 (ウェーブ 1)',
+    zh: '重新开始 (波次 1)',
+    ko: '다시 시작 (웨이브 1)'
+  },
+  'notice_restart_run': {
+    en: 'Restart the entire run? You will start back at Wave 1.',
+    jp: '最初から再起動しますか？ウェーブ 1から始まります。',
+    zh: '重新开始挑战？您将从第1波开始。',
+    ko: '처음부터 다시 시작하시겠습니까? 웨이브 1부터 시작합니다.'
+  },
+  'end_run': {
+    en: 'End Current Run',
+    jp: '挑戦を終了する',
+    zh: '结束当前挑战',
+    ko: '현재 도전 종료'
+  },
+  'notice_end_run': {
+    en: 'Are you sure you want to end the current run? This will result in immediate defeat and trigger results.',
+    jp: '現在の挑戦を終了しますか？即座に敗北となり、リザルト画面が表示されます。',
+    zh: '您确定要结束当前挑战吗？这将导致立即失败并显示结算界面。',
+    ko: '현재 도전을 종료하시겠습니까? 즉시 패배 처리되며 결과 화면으로 이동합니다.'
+  },
   'notice_home': {
     en: 'Return to home menu? Current run progress will be lost.',
     jp: 'メニューに戻りますか？現在の挑戦の進捗は失われます。',
