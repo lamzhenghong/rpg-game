@@ -71,6 +71,7 @@ interface GDDViewerProps {
   completedCharacterStoryActs?: Record<string, number>;
   initialTab?: 'lore' | 'nations' | 'characters' | 'weapons' | 'systems' | 'tutorial';
   initialCharacterId?: string;
+  initialWeaponName?: string;
 }
 
 export default function GDDViewer({ 
@@ -80,19 +81,22 @@ export default function GDDViewer({
   inventoryWeapons = [], 
   initialTab,
   initialCharacterId,
+  initialWeaponName,
   language = 'en',
   unlockedLoreEntries = [],
   completedCharacterStoryActs = {}
 }: GDDViewerProps) {
   const [activeTab, setActiveTab] = React.useState<'lore' | 'nations' | 'characters' | 'weapons' | 'systems' | 'tutorial'>(initialTab || 'lore');
   const [selectedCharacterId, setSelectedCharacterId] = React.useState<string>(initialCharacterId || PLAYABLE_CHARACTERS[0].id);
-  const [selectedWeaponName, setSelectedWeaponName] = useState<string>(WEAPONS_DATABASE[0].name);
+  const [selectedWeaponName, setSelectedWeaponName] = useState<string>(initialWeaponName || WEAPONS_DATABASE[0].name);
   const [selectedNationName, setSelectedNationName] = useState<string>(GDD_DATA.nations[0].name);
   const [charSearch, setCharSearch] = useState('');
   const [weapSearch, setWeapSearch] = useState('');
   const [charOwnershipFilter, setCharOwnershipFilter] = useState<'all' | 'owned' | 'unowned'>('all');
+  const [charRarityFilter, setCharRarityFilter] = useState<'all' | 5 | 4 | 3>('all');
   const [charElementFilter, setCharElementFilter] = useState<'all' | ElementType>('all');
   const [weapOwnershipFilter, setWeapOwnershipFilter] = useState<'all' | 'owned' | 'unowned'>('all');
+  const [weapRarityFilter, setWeapRarityFilter] = useState<'all' | 5 | 4 | 3>('all');
 
   React.useEffect(() => {
     if (initialTab) {
@@ -105,6 +109,12 @@ export default function GDDViewer({
       setSelectedCharacterId(initialCharacterId);
     }
   }, [initialCharacterId]);
+
+  React.useEffect(() => {
+    if (initialWeaponName) {
+      setSelectedWeaponName(initialWeaponName);
+    }
+  }, [initialWeaponName]);
 
   const getElementColor = (element: ElementType) => {
     switch (element) {
@@ -433,7 +443,6 @@ export default function GDDViewer({
                     value={charSearch}
                     onChange={(e) => setCharSearch(e.target.value)}
                     placeholder={t('search_placeholder', language)}
-                    className="w-full bg-slate-900/60 border border-white/10 hover:border-white/20 focus:border-amber-400 rounded-lg px-2.5 py-1 text-[10px] text-slate-200 placeholder-slate-500 focus:outline-none transition-all uppercase tracking-wide font-mono font-bold"
                   />
                   <div className="flex gap-1 mt-1.5">
                     {(['all', 'owned', 'unowned'] as const).map((filterOpt) => (
@@ -450,6 +459,25 @@ export default function GDDViewer({
                         }`}
                       >
                         {t(`filter_${filterOpt}`, language)}
+                      </button>
+                    ))}
+                  </div>
+                  {/* Rarity filter row */}
+                  <div className="flex gap-1 mt-1.5 pt-1.5 border-t border-white/5">
+                    {(['all', 5, 4, 3] as const).map((rarityOpt) => (
+                      <button
+                        key={rarityOpt}
+                        onClick={() => {
+                          setCharRarityFilter(rarityOpt);
+                          AetheriaAudioEngine.playClick();
+                        }}
+                        className={`flex-1 text-center py-1 text-[9px] font-bold uppercase tracking-wider rounded-md border transition-all ${
+                          charRarityFilter === rarityOpt
+                            ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-sm shadow-amber-500/10'
+                            : 'bg-slate-900/40 border-white/5 hover:border-white/15 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        {rarityOpt === 'all' ? 'All' : `${rarityOpt}★`}
                       </button>
                     ))}
                   </div>
@@ -486,13 +514,15 @@ export default function GDDViewer({
                       (charOwnershipFilter === 'owned' && isOwned) || 
                       (charOwnershipFilter === 'unowned' && !isOwned);
                     
-                    const matchesElement = charElementFilter === 'all' || char.element === charElementFilter;
+                    const matchesRarity = charRarityFilter === 'all' || char.rarity === charRarityFilter;
 
+                    const matchesElement = charElementFilter === 'all' || char.element === charElementFilter;
+ 
                     const matchesSearch = char.name.toLowerCase().includes(charSearch.toLowerCase()) ||
                       char.element.toLowerCase().includes(charSearch.toLowerCase()) ||
                       char.weaponType.toLowerCase().includes(charSearch.toLowerCase());
-
-                    return matchesOwnership && matchesElement && matchesSearch;
+ 
+                    return matchesOwnership && matchesRarity && matchesElement && matchesSearch;
                   });
                   // Sort by rarity descending
                   const sorted = [...filtered].sort((a, b) => b.rarity - a.rarity);
@@ -808,6 +838,25 @@ export default function GDDViewer({
                       </button>
                     ))}
                   </div>
+                  {/* Rarity filter row */}
+                  <div className="flex gap-1 mt-1.5 pt-1.5 border-t border-white/5">
+                    {(['all', 5, 4, 3] as const).map((rarityOpt) => (
+                      <button
+                        key={rarityOpt}
+                        onClick={() => {
+                          setWeapRarityFilter(rarityOpt);
+                          AetheriaAudioEngine.playClick();
+                        }}
+                        className={`flex-1 text-center py-1 text-[9px] font-bold uppercase tracking-wider rounded-md border transition-all ${
+                          weapRarityFilter === rarityOpt
+                            ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-sm shadow-amber-500/10'
+                            : 'bg-slate-900/40 border-white/5 hover:border-white/15 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        {rarityOpt === 'all' ? 'All' : `${rarityOpt}★`}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 {(() => {
                   const filtered = WEAPONS_DATABASE.filter(weap => {
@@ -816,10 +865,12 @@ export default function GDDViewer({
                       (weapOwnershipFilter === 'owned' && isOwned) || 
                       (weapOwnershipFilter === 'unowned' && !isOwned);
                     
+                    const matchesRarity = weapRarityFilter === 'all' || weap.rarity === weapRarityFilter;
+
                     const matchesSearch = weap.name.toLowerCase().includes(weapSearch.toLowerCase()) ||
                       weap.weaponType.toLowerCase().includes(weapSearch.toLowerCase());
-
-                    return matchesOwnership && matchesSearch;
+ 
+                    return matchesOwnership && matchesRarity && matchesSearch;
                   });
                   // Sort by rarity descending
                   const sorted = [...filtered].sort((a, b) => b.rarity - a.rarity);

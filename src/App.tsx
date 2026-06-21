@@ -219,6 +219,7 @@ export default function App() {
   const [partySearchQuery, setPartySearchQuery] = useState('');
   const [wikiInitialTab, setWikiInitialTab] = useState<'lore' | 'nations' | 'characters' | 'weapons' | 'systems' | 'tutorial'>('lore');
   const [wikiInitialCharId, setWikiInitialCharId] = useState<string>('aurelia');
+  const [wikiInitialWeaponName, setWikiInitialWeaponName] = useState<string>('');
   const [showResonanceSheet, setShowResonanceSheet] = useState(false);
   const [partyElementFilter, setPartyElementFilter] = useState<'All' | ElementType>('All');
   const [partyWeaponFilter, setPartyWeaponFilter] = useState<'All' | 'Sword' | 'Claymore' | 'Polearm' | 'Bow' | 'Catalyst'>('All');
@@ -2173,6 +2174,7 @@ export default function App() {
                     completedCharacterStoryActs={saveState.storyProgress?.completedCharacterStoryActs || {}}
                     initialTab={wikiInitialTab}
                     initialCharacterId={wikiInitialCharId}
+                    initialWeaponName={wikiInitialWeaponName}
                   />
                 </motion.div>
               )}
@@ -2286,6 +2288,11 @@ export default function App() {
                     onNavigateToWikiChar={(charId) => {
                       setWikiInitialTab('characters');
                       setWikiInitialCharId(charId);
+                      setActiveScreen('wiki');
+                    }}
+                    onNavigateToWikiWeapon={(weapName) => {
+                      setWikiInitialTab('weapons');
+                      setWikiInitialWeaponName(weapName);
                       setActiveScreen('wiki');
                     }}
                   />
