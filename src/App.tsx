@@ -9,7 +9,7 @@ import GachaSimulator from './components/GachaSimulator';
 import CombatArena from './components/CombatArena';
 import InventoryManager from './components/InventoryManager';
 import RogueDungeon from './components/RogueDungeon';
-import { SaveState, Weapon, InventoryItem, Quest, ElementType } from './types';
+import { SaveState, Weapon, Artifact, InventoryItem, Quest, ElementType, ArtifactSlot } from './types';
 import { t, LanguageType } from './utils/i18n';
 import { PLAYABLE_CHARACTERS } from './data/characters';
 import { GDD_DATA } from './data/world';
@@ -62,6 +62,8 @@ const INITIAL_SAVE_STATE: SaveState = {
   characterEquippedWeapon: {
     'marina': 'start_w_3'
   },
+  inventoryArtifacts: [],
+  characterEquippedArtifacts: {},
   partyIds: ['marina'],
   unlockedCharacterIds: ['marina'],
   activeQuests: INITIAL_50_QUESTS,
@@ -503,6 +505,8 @@ export default function App() {
             ...defaultState.characterEquippedWeapon,
             ...(parsed.characterEquippedWeapon || {})
           },
+          inventoryArtifacts: parsed.inventoryArtifacts || [],
+          characterEquippedArtifacts: parsed.characterEquippedArtifacts || {},
           storyProgress: {
             ...defaultState.storyProgress,
             ...(parsed.storyProgress || {})
@@ -525,11 +529,25 @@ export default function App() {
           };
         }
 
-        // Upgrade loading save to guarantee 50 quests configuration
+        // Upgrade loading save to guarantee 50 quests configuration and fix missing groups/fields
         if (!merged.activeQuests || merged.activeQuests.length < 30) {
           const completedIds = merged.completedQuestIds || [];
           merged.activeQuests = INITIAL_50_QUESTS.filter(q => !completedIds.includes(q.id));
+        } else {
+          // Repair existing active quests by copying missing template fields (like group)
+          merged.activeQuests = merged.activeQuests.map(q => {
+            const template = INITIAL_50_QUESTS.find(t => t.id === q.id);
+            if (template) {
+              return {
+                ...template,
+                currentValue: q.currentValue !== undefined ? q.currentValue : 0,
+                completed: q.completed !== undefined ? q.completed : false
+              };
+            }
+            return q;
+          });
         }
+
 
         // Initialize newbie logins array
         if (!merged.loginRewardClaimedDays) {
@@ -878,6 +896,121 @@ export default function App() {
     });
   };
 
+  const handleEquipArtifact = (charId: string, slot: ArtifactSlot, artifactId: string | null) => {
+    triggerSaveUpdate(prev => {
+      const currentEquipped = { ...(prev.characterEquippedArtifacts || {}) };
+      const currentArtifacts = [...(prev.inventoryArtifacts || [])];
+
+      if (artifactId === null) {
+        // Unequip
+        const prevArtId = currentEquipped[charId]?.[slot];
+        if (prevArtId) {
+          const idx = currentArtifacts.findIndex(a => a.id === prevArtId);
+          if (idx !== -1) {
+            currentArtifacts[idx] = { ...currentArtifacts[idx], equippedTo: undefined };
+          }
+        }
+        if (currentEquipped[charId]) {
+          const charRecord = { ...currentEquipped[charId] };
+          delete charRecord[slot];
+          currentEquipped[charId] = charRecord;
+        }
+      } else {
+        // Equip
+        const artIdx = currentArtifacts.findIndex(a => a.id === artifactId);
+        if (artIdx !== -1) {
+          const artifact = currentArtifacts[artIdx];
+          const prevEquippedCharId = artifact.equippedTo;
+
+          // 1. Unequip from previous owner if any
+          if (prevEquippedCharId && prevEquippedCharId !== charId) {
+            if (currentEquipped[prevEquippedCharId]) {
+              const prevCharRecord = { ...currentEquipped[prevEquippedCharId] };
+              delete prevCharRecord[slot];
+              currentEquipped[prevEquippedCharId] = prevCharRecord;
+            }
+          }
+
+          // 2. Unequip whatever was currently in this character's slot
+          const oldArtId = currentEquipped[charId]?.[slot];
+          if (oldArtId) {
+            const oldIdx = currentArtifacts.findIndex(a => a.id === oldArtId);
+            if (oldIdx !== -1) {
+              currentArtifacts[oldIdx] = { ...currentArtifacts[oldIdx], equippedTo: undefined };
+            }
+          }
+
+          // 3. Mark the new artifact as equipped to charId
+          currentArtifacts[artIdx] = { ...artifact, equippedTo: charId };
+
+          // 4. Update the character equipped record
+          currentEquipped[charId] = {
+            ...(currentEquipped[charId] || {}),
+            [slot]: artifactId
+          };
+        }
+      }
+
+      return {
+        ...prev,
+        inventoryArtifacts: currentArtifacts,
+        characterEquippedArtifacts: currentEquipped
+      };
+    });
+  };
+
+  const handleLockArtifact = (artId: string, lockState: boolean) => {
+    triggerSaveUpdate(prev => {
+      const currentArtifacts = [...(prev.inventoryArtifacts || [])];
+      const idx = currentArtifacts.findIndex(a => a.id === artId);
+      if (idx !== -1) {
+        currentArtifacts[idx] = { ...currentArtifacts[idx], isLocked: lockState };
+      }
+      return {
+        ...prev,
+        inventoryArtifacts: currentArtifacts
+      };
+    });
+  };
+
+  const handleDeleteArtifact = (artId: string) => {
+    triggerSaveUpdate(prev => {
+      const currentArtifacts = (prev.inventoryArtifacts || []).filter(a => a.id !== artId);
+      const currentEquipped = { ...(prev.characterEquippedArtifacts || {}) };
+
+      Object.keys(currentEquipped).forEach(charId => {
+        const slots = currentEquipped[charId];
+        if (slots) {
+          const newSlots = { ...slots };
+          let modified = false;
+          Object.keys(newSlots).forEach(slot => {
+            if (newSlots[slot] === artId) {
+              delete newSlots[slot];
+              modified = true;
+            }
+          });
+          if (modified) {
+            currentEquipped[charId] = newSlots;
+          }
+        }
+      });
+
+      return {
+        ...prev,
+        inventoryArtifacts: currentArtifacts,
+        characterEquippedArtifacts: currentEquipped
+      };
+    });
+  };
+
+  const handleAwardArtifact = (newArt: Artifact) => {
+    triggerSaveUpdate(prev => ({
+      ...prev,
+      inventoryArtifacts: [...(prev.inventoryArtifacts || []), newArt]
+    }));
+  };
+
+
   // Stat Incrementor for Achievements
   const handleIncrementStat = (pk: string, val?: number) => {
     triggerSaveUpdate(prev => {
@@ -1157,6 +1290,23 @@ export default function App() {
         }
       }
 
+      const filteredQuests = prev.activeQuests.filter(q => q.id !== questId);
+      let replenished = filteredQuests;
+      
+      const replenishQuestsGroup = (questsList: Quest[], grp: 'daily' | 'weekly' | 'normal') => {
+        const existingOfGroup = questsList.filter(q => q.group === grp);
+        if (existingOfGroup.length === 0) {
+          const templates = INITIAL_50_QUESTS.filter(q => q.group === grp);
+          const newQuests = templates.map(q => ({ ...q, currentValue: 0, completed: false }));
+          return [...questsList.filter(q => q.group !== grp), ...newQuests];
+        }
+        return questsList;
+      };
+      
+      replenished = replenishQuestsGroup(replenished, 'daily');
+      replenished = replenishQuestsGroup(replenished, 'weekly');
+      replenished = replenishQuestsGroup(replenished, 'normal');
+
       let nextState: SaveState = {
         ...prev,
         aetherGems: nextGems,
@@ -1169,7 +1319,7 @@ export default function App() {
         characterEquippedWeapon: nextCharacterEquippedWeapon,
         partyIds: nextPartyIds,
         inventoryWeapons: nextInventoryWeapons,
-        activeQuests: prev.activeQuests.filter(q => q.id !== questId),
+        activeQuests: replenished,
         completedQuestIds: [...prev.completedQuestIds, questId]
       };
 
@@ -1199,13 +1349,32 @@ export default function App() {
     const totalMora = completedQuests.reduce((sum, q) => sum + q.rewardMora, 0);
     const completedIds = completedQuests.map(q => q.id);
 
-    triggerSaveUpdate(prev => ({
-      ...prev,
-      aetherGems: prev.aetherGems + totalTokens,
-      mora: prev.mora + totalMora,
-      activeQuests: prev.activeQuests.filter(q => !completedIds.includes(q.id)),
-      completedQuestIds: [...prev.completedQuestIds, ...completedIds]
-    }));
+    triggerSaveUpdate(prev => {
+      const filteredQuests = prev.activeQuests.filter(q => !completedIds.includes(q.id));
+      let replenished = filteredQuests;
+      
+      const replenishQuestsGroup = (questsList: Quest[], grp: 'daily' | 'weekly' | 'normal') => {
+        const existingOfGroup = questsList.filter(q => q.group === grp);
+        if (existingOfGroup.length === 0) {
+          const templates = INITIAL_50_QUESTS.filter(q => q.group === grp);
+          const newQuests = templates.map(q => ({ ...q, currentValue: 0, completed: false }));
+          return [...questsList.filter(q => q.group !== grp), ...newQuests];
+        }
+        return questsList;
+      };
+      
+      replenished = replenishQuestsGroup(replenished, 'daily');
+      replenished = replenishQuestsGroup(replenished, 'weekly');
+      replenished = replenishQuestsGroup(replenished, 'normal');
+
+      return {
+        ...prev,
+        aetherGems: prev.aetherGems + totalTokens,
+        mora: prev.mora + totalMora,
+        activeQuests: replenished,
+        completedQuestIds: [...prev.completedQuestIds, ...completedIds]
+      };
+    });
 
     showInGameAlert(
       "Claimed All Quest Rewards!",
@@ -1959,13 +2128,13 @@ export default function App() {
       </header>
 
       {/* Primary Dashboard layout */}
-      <main className="flex-1 max-w-[1500px] w-full mx-auto p-4 md:p-6 grid grid-cols-1 xl:grid-cols-4 gap-6 items-start">
+      <main className="flex-1 max-w-[1500px] w-full mx-auto p-4 md:p-6 grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
         
         {/* Left Side: Main screens container (takes 3 grid cells) */}
-        <div className="xl:col-span-3 space-y-6">
+        <div className="lg:col-span-3 space-y-6">
           
           {/* Main Action tab selectors */}
-          <div className="flex overflow-x-auto whitespace-nowrap scrollbar-none bg-[#0b0f19]/80 backdrop-blur-md border border-white/10 p-1.5 rounded-xl w-full gap-1 shadow-[0_0_20px_rgba(0,0,0,0.5)]">
+          <div className="flex md:flex-wrap overflow-x-auto md:overflow-x-visible whitespace-nowrap md:whitespace-normal scrollbar-custom-tabs bg-[#0b0f19]/80 backdrop-blur-md border border-white/10 p-2 rounded-xl w-full gap-1 shadow-[0_0_20px_rgba(0,0,0,0.5)]">
             <button
               onClick={() => {
                 setActiveScreen('wiki');
@@ -2170,6 +2339,7 @@ export default function App() {
                     ownedCharacterIds={saveState.unlockedCharacterIds || []}
                     characterPortraits={saveState.characterPortraits || {}}
                     inventoryWeapons={saveState.inventoryWeapons || []}
+                    inventoryArtifacts={saveState.inventoryArtifacts || []}
                     language={language}
                     unlockedLoreEntries={saveState.storyProgress?.unlockedLoreEntries || []}
                     completedCharacterStoryActs={saveState.storyProgress?.completedCharacterStoryActs || {}}
@@ -2226,6 +2396,9 @@ export default function App() {
                     combatSpeed={combatSpeed}
                     fpsLimit={fpsLimit}
                     language={language}
+                    inventoryArtifacts={saveState.inventoryArtifacts || []}
+                    characterEquippedArtifacts={saveState.characterEquippedArtifacts || {}}
+                    onAwardArtifact={handleAwardArtifact}
                   />
                 </motion.div>
               )}
@@ -2324,6 +2497,11 @@ export default function App() {
                     onModifyCurrencies={(g, m) => handleModifyCurrencies(g, m)}
                     devCheatsEnabled={devCheatsEnabled}
                     language={language}
+                    inventoryArtifacts={saveState.inventoryArtifacts || []}
+                    characterEquippedArtifacts={saveState.characterEquippedArtifacts || {}}
+                    onEquipArtifact={handleEquipArtifact}
+                    onLockArtifact={handleLockArtifact}
+                    onDeleteArtifact={handleDeleteArtifact}
                   />
                 </motion.div>
               )}
@@ -2560,7 +2738,7 @@ export default function App() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-[50vh] sm:max-h-none overflow-y-auto p-1">
                       {(() => {
                         const ownedCharacters = PLAYABLE_CHARACTERS.filter(c => (saveState.unlockedCharacterIds || []).includes(c.id));
                         const sortedOwnedCharacters = [...ownedCharacters].sort((a, b) => {
@@ -2708,7 +2886,7 @@ export default function App() {
               </h4>
             </div>
 
-            <div className="grid grid-cols-2 gap-2.5">
+            <div className="grid grid-cols-2 gap-2.5 max-h-[280px] overflow-y-auto pr-1">
               {(() => {
                 const ownedCharacters = PLAYABLE_CHARACTERS.filter(c => (saveState.unlockedCharacterIds || []).includes(c.id));
                 const sortedOwnedCharacters = [...ownedCharacters].sort((a, b) => {
@@ -2817,20 +2995,24 @@ export default function App() {
             </h4>
             <div className="space-y-2 text-slate-400 font-medium">
               <div className="flex justify-between items-center border-b border-white/5 pb-1">
-                <span className="uppercase text-[9px] tracking-wider text-slate-500">Purged Sentinels</span>
-                <span className="font-black text-red-400 font-mono text-xs">{saveState.stats.totalEnemiesDefeated}</span>
+                <span className="uppercase text-[9px] tracking-wider text-slate-500">Reactions Achieved</span>
+                <span className="font-black text-sky-400 font-mono text-xs">{saveState.stats.reactionsTriggered || 0}</span>
               </div>
               <div className="flex justify-between items-center border-b border-white/5 pb-1">
-                <span className="uppercase text-[9px] tracking-wider text-slate-500">Dodge-Dash Triggers</span>
-                <span className="font-black text-amber-500 font-mono text-xs">{saveState.stats.perfectDodges}</span>
+                <span className="uppercase text-[9px] tracking-wider text-slate-500">Highest Story Unlocked</span>
+                <span className="font-black text-indigo-400 font-mono text-xs">Stage {saveState.storyProgress?.currentStage || "1-1"}</span>
               </div>
               <div className="flex justify-between items-center border-b border-white/5 pb-1">
-                <span className="uppercase text-[9px] tracking-wider text-slate-500">Shield Parries</span>
-                <span className="font-black text-emerald-400 font-mono text-xs">{saveState.stats.successfulParries}</span>
+                <span className="uppercase text-[9px] tracking-wider text-slate-500">Summons Performed</span>
+                <span className="font-black text-amber-500 font-mono text-xs">{saveState.stats.totalPulls || 0}</span>
               </div>
               <div className="flex justify-between items-center border-b border-white/5 pb-1">
-                <span className="uppercase text-[9px] tracking-wider text-slate-500">Elemental Overloads</span>
-                <span className="font-black text-sky-400 font-mono text-xs">{saveState.stats.reactionsTriggered}</span>
+                <span className="uppercase text-[9px] tracking-wider text-slate-500">Characters Owned</span>
+                <span className="font-black text-emerald-400 font-mono text-xs">{(saveState.unlockedCharacterIds || []).length} / {PLAYABLE_CHARACTERS.length}</span>
+              </div>
+              <div className="flex justify-between items-center border-b border-white/5 pb-1">
+                <span className="uppercase text-[9px] tracking-wider text-slate-500">Weapons Owned</span>
+                <span className="font-black text-pink-400 font-mono text-xs">{(saveState.inventoryWeapons || []).length}</span>
               </div>
               <div className="flex justify-between items-center border-b border-white/5 pb-1">
                 <span className="uppercase text-[9px] tracking-wider text-slate-500">Play Time</span>
@@ -3174,6 +3356,9 @@ export default function App() {
             isHardMode={storyBattleConfig.isHardMode}
             saveState={saveState}
             onStoryBattleEnd={handleStoryBattleEnd}
+            inventoryArtifacts={saveState.inventoryArtifacts || []}
+            characterEquippedArtifacts={saveState.characterEquippedArtifacts || {}}
+            onAwardArtifact={handleAwardArtifact}
           />
         </motion.div>
       )}

@@ -5,13 +5,14 @@
 
 import React, { useState } from 'react';
 import { PLAYABLE_CHARACTERS } from '../data/characters';
-import { PlayableCharacter, Weapon, InventoryItem, ElementType, Quest } from '../types';
-import { Shield, Sparkles, Coins, Hammer, Star, StarOff, ArrowUpCircle, BookOpen, Smile, User, Flame, Droplet, Snowflake, Zap, Wind, Leaf, Search, HelpCircle, CheckCircle2, Circle } from 'lucide-react';
+import { PlayableCharacter, Weapon, InventoryItem, ElementType, Quest, Artifact, ArtifactSlot, ArtifactSet } from '../types';
+import { Shield, Sparkles, Coins, Hammer, Star, StarOff, ArrowUpCircle, BookOpen, Smile, User, Flame, Droplet, Snowflake, Zap, Wind, Leaf, Search, HelpCircle, CheckCircle2, Circle, Layers, Lock, Unlock, Trash2 } from 'lucide-react';
 import { AetheriaAudioEngine } from '../utils/audio';
 import { WEAPONS_DATABASE } from '../data/weapons';
 import { getAccumulatedPortraitBuffs } from '../utils/portraits';
 import ElementalReactionsModal from './ElementalReactionsModal';
 import { LanguageType, t } from '../utils/i18n';
+import { ARTIFACT_SETS, ARTIFACT_NAMES, getArtifactMainStat } from '../data/artifacts';
 
 export function getUpgradedWeaponStats(weapon: Weapon) {
   const lvl = weapon.level || 1;
@@ -75,11 +76,16 @@ interface InventoryManagerProps {
   mora: number;
   inventoryWeapons: Weapon[];
   inventoryItems: InventoryItem[];
+  inventoryArtifacts?: Artifact[];
+  characterEquippedArtifacts?: Record<string, Record<string, string>>; // characterId -> { slot -> artifactInstanceId }
   characterLevels: Record<string, number>;
   characterEquippedWeapon: Record<string, string>; // characterId -> weaponUid
   ownedCharacterIds: string[];
   onLevelUpCharacter: (id: string, costMora: number, costItems: number) => void;
   onEquipWeapon: (charId: string, weaponUid: string) => void;
+  onEquipArtifact?: (charId: string, slot: ArtifactSlot, artifactId: string | null) => void;
+  onLockArtifact?: (artId: string, lockState: boolean) => void;
+  onDeleteArtifact?: (artId: string) => void;
   onModifyCurrencies: (gemsDiff: number, moraDiff: number) => void;
   onUpgradeWeapon?: (weaponUid: string) => void;
   onShowAlert: (msg: string, solution?: string, type?: 'success' | 'error' | 'info') => void;
@@ -95,11 +101,16 @@ export default function InventoryManager({
   mora,
   inventoryWeapons,
   inventoryItems,
+  inventoryArtifacts = [],
+  characterEquippedArtifacts = {},
   characterLevels,
   characterEquippedWeapon,
   ownedCharacterIds,
   onLevelUpCharacter,
   onEquipWeapon,
+  onEquipArtifact,
+  onLockArtifact,
+  onDeleteArtifact,
   onModifyCurrencies,
   onUpgradeWeapon,
   onShowAlert,
@@ -111,9 +122,22 @@ export default function InventoryManager({
   language = 'en'
 }: InventoryManagerProps) {
   const [selectedCharId, setSelectedCharId] = useState<string>(ownedCharacterIds[0] || 'aurelia');
-  const [activeTab, setActiveTab] = useState<'weapons' | 'items' | 'characters'>('characters');
+  const [activeTab, setActiveTab] = useState<'weapons' | 'items' | 'characters' | 'artifacts'>('characters');
   const [rarityFilter, setRarityFilter] = useState<'all' | 5 | 4 | 3>('all');
   const [elementFilter, setElementFilter] = useState<'all' | ElementType>('all');
+  
+  // Artifact filter states
+  const [artSlotFilter, setArtSlotFilter] = useState<'all' | ArtifactSlot>('all');
+  const [artSetFilter, setArtSetFilter] = useState<'all' | ArtifactSet>('all');
+  const [artRarityFilter, setArtRarityFilter] = useState<'all' | 3 | 4 | 5>('all');
+  const [artLockFilter, setArtLockFilter] = useState<'all' | 'locked' | 'unlocked'>('all');
+  const [artSearchQuery, setArtSearchQuery] = useState('');
+  const [selectedArtifactId, setSelectedArtifactId] = useState<string | null>(null);
+  
+  // Equipping state on character detail page
+  const [activeEquipSlot, setActiveEquipSlot] = useState<ArtifactSlot | null>(null);
+  const [artifactEquipSearch, setArtifactEquipSearch] = useState('');
+
   const [weaponSearchQuery, setWeaponSearchQuery] = useState('');
   const [isReactionsModalOpen, setIsReactionsModalOpen] = useState(false);
   const [activeQuestTab, setActiveQuestTab] = useState<'daily' | 'weekly' | 'normal'>('daily');
@@ -221,18 +245,91 @@ export default function InventoryManager({
   const pLvl = characterPortraits?.[selectedChar.id] || 0;
   const pBuffs = getAccumulatedPortraitBuffs(selectedChar.id, pLvl);
 
+  // --- ARTIFACT STATS CALCULATION ---
+  const equippedArtifactIds = characterEquippedArtifacts?.[selectedChar.id] || {};
+  const equippedArts = Object.entries(equippedArtifactIds)
+    .map(([slot, artId]) => inventoryArtifacts.find(a => a.id === artId))
+    .filter((a): a is Artifact => !!a);
+
+  const setCounts: Record<ArtifactSet, number> = {
+    Vanguard: 0,
+    Guardian: 0,
+    Celestial: 0,
+    Chrono: 0
+  };
+  equippedArts.forEach(art => {
+    if (art.set in setCounts) {
+      setCounts[art.set]++;
+    }
+  });
+
+  let artBonusHpPercent = 0;
+  let artBonusDmgPercent = 0;
+  let artBonusCritRate = 0;
+  let artBonusCritDmg = 0;
+  let artBonusCdReduction = 0;
+
+  if (setCounts.Guardian >= 4) {
+    artBonusHpPercent += 0.55;
+  } else if (setCounts.Guardian >= 2) {
+    artBonusHpPercent += 0.20;
+  }
+
+  if (setCounts.Vanguard >= 4) {
+    artBonusDmgPercent += 0.45;
+  } else if (setCounts.Vanguard >= 2) {
+    artBonusDmgPercent += 0.15;
+  }
+
+  if (setCounts.Celestial >= 4) {
+    artBonusCritRate += 0.25;
+    artBonusCritDmg += 0.55;
+  } else if (setCounts.Celestial >= 2) {
+    artBonusCritRate += 0.10;
+    artBonusCritDmg += 0.20;
+  }
+
+  if (setCounts.Chrono >= 4) {
+    artBonusCdReduction += 0.30;
+  } else if (setCounts.Chrono >= 2) {
+    artBonusCdReduction += 0.10;
+  }
+
+  let artSlotHpPercent = 0;
+  let artSlotDmgPercent = 0;
+  let artSlotCritRate = 0;
+  let artSlotCritDmg = 0;
+
+  equippedArts.forEach(art => {
+    const stat = getArtifactMainStat(art.slot, art.rarity);
+    if (art.slot === 'helmet') {
+      artSlotHpPercent += stat.value;
+    } else if (art.slot === 'hands') {
+      artSlotDmgPercent += stat.value;
+    } else if (art.slot === 'leg') {
+      artSlotCritRate += stat.value;
+    } else if (art.slot === 'shoe') {
+      artSlotCritDmg += stat.value;
+    }
+  });
+
+  const totalArtHpPercent = artBonusHpPercent + artSlotHpPercent;
+  const totalArtDmgPercent = artBonusDmgPercent + artSlotDmgPercent;
+  const totalArtCritRate = artBonusCritRate + artSlotCritRate;
+  const totalArtCritDmg = artBonusCritDmg + artSlotCritDmg;
+
   let baseHp = Math.round((selectedChar.baseStats.hp + charLevel * 14) * charMult);
   let baseDef = Math.round((selectedChar.baseStats.def + charLevel * 2.4) * charMult);
 
   const finalCharBaseAtk = Math.round((selectedChar.baseStats.atk + charLevel * 3.8) * charMult);
   const finalWeaponBaseAtk = activeEquippedWeapon ? Math.round((activeEquippedWeapon.baseAtk + (activeEquippedWeapon.level * 2.5)) * wpMult) : 10;
   const rawAtk = finalCharBaseAtk + finalWeaponBaseAtk;
-  let baseAtk = Math.round(rawAtk * (1 + bonusAtkPercent));
-  let baseCritRate = selectedChar.baseStats.critRate + bonusCritRate;
-  let baseCritDmg = selectedChar.baseStats.critDmg + bonusCritDmg;
+  let baseAtk = Math.round(rawAtk * (1 + bonusAtkPercent + totalArtDmgPercent));
+  let baseCritRate = selectedChar.baseStats.critRate + bonusCritRate + totalArtCritRate;
+  let baseCritDmg = selectedChar.baseStats.critDmg + bonusCritDmg + totalArtCritDmg;
 
   // Apply Portrait buffs
-  baseHp = Math.round(baseHp * (1 + pBuffs.hp));
+  baseHp = Math.round(baseHp * (1 + pBuffs.hp + totalArtHpPercent));
   baseDef = Math.round(baseDef * (1 + pBuffs.def));
   baseAtk = Math.round(baseAtk * (1 + pBuffs.atk));
   baseCritRate += pBuffs.critRate;
@@ -243,6 +340,7 @@ export default function InventoryManager({
   const finalAtk = baseAtk;
   const finalCritRate = baseCritRate * 100;
   const finalCritDmg = baseCritDmg * 100;
+  const finalCdReduction = artBonusCdReduction * 100;
 
   // Quick sandbox grant
   const handleCheatResources = () => {
@@ -364,7 +462,98 @@ export default function InventoryManager({
               >
                 Augments
               </button>
+              <button
+                onClick={() => {
+                  setActiveTab('artifacts');
+                  AetheriaAudioEngine.playClick();
+                }}
+                className={`flex-1 text-center py-2.5 rounded-md text-xs font-black uppercase tracking-widest transition-all cursor-pointer ${
+                  activeTab === 'artifacts' ? 'bg-amber-400 text-slate-950 font-black' : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                Artifacts
+              </button>
             </div>
+
+            {/* Artifact Filter Controls Row */}
+            {activeTab === 'artifacts' && (
+              <div className="space-y-3 bg-black/35 p-3 rounded-lg border border-white/5">
+                {/* Search box */}
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={artSearchQuery}
+                    onChange={(e) => setArtSearchQuery(e.target.value)}
+                    placeholder="Search artifact name..."
+                    className="w-full bg-slate-900/60 border border-white/10 hover:border-white/20 focus:border-amber-400 rounded-lg pl-8 pr-2 py-1 text-[10px] text-slate-200 placeholder-slate-500 focus:outline-none transition-all uppercase tracking-wide font-mono font-bold"
+                  />
+                </div>
+
+                {/* Slot Filter */}
+                <div className="flex flex-col gap-1">
+                  <span className="text-[9px] font-black text-slate-450 uppercase tracking-widest pl-1">Slot:</span>
+                  <div className="flex flex-wrap gap-1">
+                    {(['all', 'helmet', 'hands', 'leg', 'shoe'] as const).map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => {
+                          setArtSlotFilter(s);
+                          AetheriaAudioEngine.playClick();
+                        }}
+                        className={`px-2 py-1 text-[9px] font-bold rounded uppercase tracking-wider transition-all ${
+                          artSlotFilter === s ? 'bg-amber-400 text-slate-955 font-black' : 'bg-black/40 text-slate-400 hover:text-slate-200 border border-white/5'
+                        }`}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Set Filter */}
+                <div className="flex flex-col gap-1">
+                  <span className="text-[9px] font-black text-slate-455 uppercase tracking-widest pl-1">Set:</span>
+                  <div className="flex flex-wrap gap-1">
+                    {(['all', 'Vanguard', 'Guardian', 'Celestial', 'Chrono'] as const).map((setOpt) => (
+                      <button
+                        key={setOpt}
+                        onClick={() => {
+                          setArtSetFilter(setOpt);
+                          AetheriaAudioEngine.playClick();
+                        }}
+                        className={`px-2 py-1 text-[9px] font-bold rounded uppercase tracking-wider transition-all ${
+                          artSetFilter === setOpt ? 'bg-amber-400 text-slate-955 font-black' : 'bg-black/40 text-slate-400 hover:text-slate-200 border border-white/5'
+                        }`}
+                      >
+                        {setOpt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Rarity Filter */}
+                <div className="flex flex-col gap-1">
+                  <span className="text-[9px] font-black text-slate-450 uppercase tracking-widest pl-1">Rarity:</span>
+                  <div className="flex gap-1.5">
+                    {(['all', 5, 4, 3] as const).map((r) => (
+                      <button
+                        key={r}
+                        onClick={() => {
+                          setArtRarityFilter(r);
+                          AetheriaAudioEngine.playClick();
+                        }}
+                        className={`flex-1 text-center py-1 text-[9px] font-black rounded uppercase tracking-wider transition-all ${
+                          artRarityFilter === r ? 'bg-amber-400 text-slate-955 font-black' : 'bg-black/40 text-slate-450 hover:text-slate-250 border border-white/5'
+                        }`}
+                      >
+                        {r === 'all' ? 'All' : r === 5 ? '5★' : r === 4 ? '4★' : '3★'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Premium Rarity Filter Controls Row */}
             {(activeTab === 'characters' || activeTab === 'weapons') && (
@@ -579,6 +768,97 @@ export default function InventoryManager({
                 ))}
               </div>
             )}
+
+            {activeTab === 'artifacts' && (
+              <div className="space-y-3 max-h-[500px] overflow-y-auto pr-1">
+                {(() => {
+                  const filteredArtifacts = inventoryArtifacts.filter(art => {
+                    const matchesSearch = art.name.toLowerCase().includes(artSearchQuery.toLowerCase()) ||
+                      art.set.toLowerCase().includes(artSearchQuery.toLowerCase());
+                    const matchesSlot = artSlotFilter === 'all' || art.slot === artSlotFilter;
+                    const matchesSet = artSetFilter === 'all' || art.set === artSetFilter;
+                    const matchesRarity = artRarityFilter === 'all' || art.rarity === artRarityFilter;
+                    return matchesSearch && matchesSlot && matchesSet && matchesRarity;
+                  }).sort((a, b) => {
+                    if (a.rarity !== b.rarity) {
+                      return b.rarity - a.rarity; // Gold first, then purple, then blue
+                    }
+                    const slotOrder = { helmet: 0, hands: 1, leg: 2, shoe: 3 };
+                    if (slotOrder[a.slot] !== slotOrder[b.slot]) {
+                      return slotOrder[a.slot] - slotOrder[b.slot];
+                    }
+                    return a.name.localeCompare(b.name);
+                  });
+
+                  if (filteredArtifacts.length === 0) {
+                    return (
+                      <div className="text-center py-16 text-slate-500 text-sm italic font-mono uppercase">
+                        No artifacts matching criteria found.
+                      </div>
+                    );
+                  }
+
+                  return filteredArtifacts.map((art) => {
+                    const isSelected = selectedArtifactId === art.id;
+                    const mainStat = getArtifactMainStat(art.slot, art.rarity);
+                    
+                    return (
+                      <button
+                        key={art.id}
+                        onClick={() => {
+                          setSelectedArtifactId(art.id);
+                          AetheriaAudioEngine.playClick();
+                        }}
+                        className={`w-full text-left p-3.5 rounded-xl border transition-all cursor-pointer relative overflow-hidden flex items-center justify-between ${
+                          isSelected
+                            ? 'bg-[#0e1628] border-indigo-500/50 text-slate-100 shadow-[0_0_15px_rgba(99,102,241,0.15)]'
+                            : 'bg-black/25 border-white/5 text-slate-400 hover:border-white/10'
+                        }`}
+                      >
+                        {isSelected && (
+                          <div className="absolute top-0 bottom-0 left-0 w-1 bg-amber-400 shadow-[0_0_8px_#fbbf24]" />
+                        )}
+
+                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                          {/* Rarity box */}
+                          <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 text-slate-955 font-black text-xs ${
+                            art.rarity === 5 ? 'bg-gradient-to-tr from-amber-600 to-amber-350 text-slate-950 font-black' :
+                            art.rarity === 4 ? 'bg-gradient-to-tr from-purple-600 to-purple-400 text-white' :
+                            'bg-gradient-to-tr from-blue-600 to-blue-400 text-white'
+                          }`}>
+                            {art.slot.substring(0, 3).toUpperCase()}
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-extrabold text-xs uppercase tracking-tight text-white truncate max-w-[150px] font-display">
+                                {art.name}
+                              </span>
+                              {art.isLocked && <Lock className="w-2.5 h-2.5 text-amber-400" />}
+                            </div>
+                            <div className="text-[9px] text-slate-400 font-mono uppercase mt-0.5 flex items-center gap-1 truncate">
+                              <span>{art.set} • {mainStat.display}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col items-end gap-1 shrink-0 ml-2">
+                          {art.equippedTo ? (
+                            <span className="text-[8px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-1.5 py-0.5 rounded font-black uppercase font-mono">
+                              Equipped
+                            </span>
+                          ) : (
+                            <span className="text-[8px] bg-slate-800 text-slate-500 border border-slate-900 px-1.5 py-0.5 rounded font-black uppercase font-mono">
+                              Inventory
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
+            )}
           </div>
           <div className="p-4 bg-black/40 border border-white/5 rounded-xl text-center">
             <span className="text-xs text-slate-500 font-mono uppercase tracking-widest block">Ledger signature status</span>
@@ -588,7 +868,162 @@ export default function InventoryManager({
 
         {/* Right Columns (2 columns) display detail of selected character */}
         <div className="lg:col-span-2 bg-[#060811]/60 border border-white/10 p-6 rounded-xl flex flex-col justify-between shadow-[0_0_25px_rgba(99,102,241,0.06)]">
-          <div className="space-y-6">
+          {activeTab === 'artifacts' ? (
+            // ARTIFACT DETAIL AND MANAGEMENT CONTENT
+            <div className="space-y-6 flex-1 flex flex-col justify-between">
+              {(() => {
+                const activeArt = inventoryArtifacts.find(a => a.id === selectedArtifactId) || (inventoryArtifacts.length > 0 ? inventoryArtifacts[0] : null);
+                if (!activeArt) {
+                  return (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center p-8 space-y-3">
+                      <Layers className="w-12 h-12 text-slate-650 animate-pulse" />
+                      <h3 className="text-base font-black text-slate-400 uppercase tracking-widest font-mono">No Artifacts Available</h3>
+                      <p className="text-xs text-slate-500 max-w-xs font-mono lowercase">
+                        grind waves in **artifact grind** mode inside the combat arena to secure random helmet, hands, leg, and shoe artifact drops!
+                      </p>
+                    </div>
+                  );
+                }
+
+                const mainStat = getArtifactMainStat(activeArt.slot, activeArt.rarity);
+                const setInfo = ARTIFACT_SETS[activeArt.set];
+                const equippedCharName = activeArt.equippedTo 
+                  ? PLAYABLE_CHARACTERS.find(c => c.id === activeArt.equippedTo)?.name || activeArt.equippedTo 
+                  : null;
+
+                return (
+                  <div className="space-y-6 flex-1 flex flex-col justify-between">
+                    <div className="space-y-6">
+                      {/* Header: Artifact detail profile */}
+                      <div className="flex items-center gap-5 border-b border-white/15 pb-4">
+                        <div className={`w-16 h-16 rounded-xl flex items-center justify-center text-3xl font-black shadow-[0_0_20px_rgba(0,0,0,0.6)] ring-2 ring-white/10 ${
+                          activeArt.rarity === 5 ? 'bg-gradient-to-tr from-amber-600 to-amber-300 text-slate-955 font-black' :
+                          activeArt.rarity === 4 ? 'bg-gradient-to-tr from-purple-600 to-purple-400 text-white' :
+                          'bg-gradient-to-tr from-blue-600 to-blue-400 text-white'
+                        }`}>
+                          {activeArt.slot.substring(0, 3).toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-lg font-black text-slate-100 uppercase tracking-widest font-display truncate">{activeArt.name}</h3>
+                          <div className="text-xs text-slate-300 flex flex-wrap items-center gap-3 mt-1.5 uppercase font-[#95a5a6] font-mono">
+                            <span className={`font-extrabold px-2.5 py-0.5 border rounded ${
+                              activeArt.rarity === 5 ? 'text-amber-400 bg-amber-400/10 border-amber-400/20' :
+                              activeArt.rarity === 4 ? 'text-purple-400 bg-purple-400/10 border-purple-400/20' :
+                              'text-blue-400 bg-blue-400/10 border-blue-400/20'
+                            }`}>
+                              {activeArt.rarity === 5 ? 'Gold (Legendary)' : activeArt.rarity === 4 ? 'Purple (Rare)' : 'Blue (Common)'}
+                            </span>
+                            <span>•</span>
+                            <span className="text-slate-400 font-bold uppercase tracking-wider">{activeArt.slot} slot</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Stats card */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* Main Stat Card */}
+                        <div className="p-5 bg-black/45 border border-white/10 rounded-xl relative overflow-hidden space-y-3">
+                          <div className="absolute top-0 bottom-0 left-0 w-1.5 bg-amber-400 shadow-[0_0_12px_rgba(251,191,36,0.7)]" />
+                          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest font-mono">Core Attribute</span>
+                          <div className="flex justify-between items-end mt-1">
+                            <span className="text-sm font-extrabold text-slate-205 uppercase font-mono">{mainStat.name} Boost</span>
+                            <span className="font-mono text-2xl font-black text-amber-400">{mainStat.display}</span>
+                          </div>
+                          <p className="text-[10px] text-slate-500 leading-relaxed font-mono mt-2 uppercase">
+                            helmet: HP% • hands: DMG% • leg: CRIT rate% • shoe: CRIT dmg%
+                          </p>
+                        </div>
+
+                        {/* Equipment Status Card */}
+                        <div className="p-5 bg-black/45 border border-white/10 rounded-xl relative overflow-hidden space-y-3">
+                          <div className="absolute top-0 bottom-0 left-0 w-1.5 bg-indigo-500 shadow-[0_0_12px_rgba(99,102,241,0.7)]" />
+                          <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest font-mono">Attachment Registry</span>
+                          <div className="flex justify-between items-end mt-1">
+                            <span className="text-sm font-extrabold text-slate-205 uppercase font-mono">Equipped Status</span>
+                            <span className={`font-mono text-sm font-black uppercase ${equippedCharName ? 'text-indigo-400' : 'text-slate-500'}`}>
+                              {equippedCharName ? `Equipped by ${equippedCharName}` : 'In Inventory'}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-500 leading-relaxed font-mono mt-2 uppercase">
+                            {equippedCharName ? 'un-equip artifact inside character panel to free slot' : 'artifact can be equipped on any hero roster slot'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Set bonuses details */}
+                      <div className="bg-black/35 border border-white/10 p-5 rounded-xl space-y-3">
+                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                          <Layers className="w-4 h-4 text-amber-400" />
+                          Set Bonus Matrix: {setInfo.name} ({activeArt.set})
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                          <div className="bg-white/5 border border-white/10 p-3 rounded-lg">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block font-mono">2-Piece Effect</span>
+                            <span className="text-xs text-slate-250 font-bold block mt-1">{setInfo.desc2pc}</span>
+                          </div>
+                          <div className="bg-white/5 border border-white/10 p-3 rounded-lg">
+                            <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block font-mono">4-Piece Effect</span>
+                            <span className="text-xs text-amber-305 text-amber-300 font-extrabold block mt-1">{setInfo.desc4pc}</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Actions (Lock/Unlock and Delete/Salvage) */}
+                    <div className="flex flex-col md:flex-row gap-4 border-t border-white/10 pt-5">
+                      {/* Lock Button */}
+                      <button
+                        onClick={() => {
+                          onLockArtifact && onLockArtifact(activeArt.id, !activeArt.isLocked);
+                          AetheriaAudioEngine.playClick();
+                        }}
+                        className="flex-1 bg-black/45 hover:bg-black/75 text-slate-200 border border-white/10 font-black text-xs uppercase tracking-widest px-6 py-3 rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer"
+                      >
+                        {activeArt.isLocked ? (
+                          <>
+                            <Unlock className="w-4 h-4 text-amber-400" />
+                            <span>Unlock Artifact</span>
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="w-4 h-4 text-slate-400" />
+                            <span>Lock Artifact</span>
+                          </>
+                        )}
+                      </button>
+
+                      {/* Delete Button */}
+                      <button
+                        onClick={() => {
+                          if (activeArt.isLocked) {
+                            onShowAlert("Artifact is Locked!", "Please unlock the artifact first in order to delete or salvage it.", "error");
+                            return;
+                          }
+                          if (activeArt.equippedTo) {
+                            onShowAlert("Artifact is Equipped!", "Please unequip this artifact from " + equippedCharName + " before deleting it.", "error");
+                            return;
+                          }
+                          if (confirm("Are you sure you want to delete and salvage this artifact? This action is permanent and cannot be undone!")) {
+                            onDeleteArtifact && onDeleteArtifact(activeArt.id);
+                            onShowAlert("Artifact Salvaged!", "Successfully salvaged and removed artifact from database registry.", "success");
+                          }
+                        }}
+                        className={`flex-1 font-black text-xs uppercase tracking-widest px-6 py-3 rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95 cursor-pointer border ${
+                          activeArt.isLocked
+                            ? 'bg-slate-800 text-slate-500 border-slate-700 cursor-not-allowed'
+                            : 'bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border-rose-500/30'
+                        }`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        <span>Salvage / Delete</span>
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          ) : (
+            <div className="space-y-6">
             
             {/* Header character profile details */}
             <div className="flex items-center gap-5 border-b border-white/15 pb-4">
@@ -630,7 +1065,7 @@ export default function InventoryManager({
                       </span>
                     </div>
                     <span className="text-xs text-slate-500 font-mono lowercase tracking-wide mt-1">
-                      base: {Math.round(selectedChar.baseStats.atk * charMult)} + growth: {Math.round(charLevel * 3.8 * charMult)} + armament: {finalWeaponBaseAtk} {bonusAtkPercent > 0 ? ` (+${Math.round(bonusAtkPercent * 100)}% weapon bonus)` : ''} [rarity mult: {charMult}x]
+                      base: {Math.round(selectedChar.baseStats.atk * charMult)} + growth: {Math.round(charLevel * 3.8 * charMult)} + weapon: {finalWeaponBaseAtk} {totalArtDmgPercent > 0 ? ` (+${Math.round(totalArtDmgPercent * 100)}% artifact)` : ''} {pBuffs.atk > 0 ? ` (+${Math.round(pBuffs.atk * 100)}% portrait)` : ''} [mult: {charMult}x]
                     </span>
                   </div>
 
@@ -643,7 +1078,7 @@ export default function InventoryManager({
                       </span>
                     </div>
                     <span className="text-xs text-slate-500 font-mono lowercase tracking-wide mt-1">
-                      base: {Math.round(selectedChar.baseStats.hp * charMult)} + growth: {Math.round(charLevel * 14 * charMult)} HP
+                      base: {Math.round(selectedChar.baseStats.hp * charMult)} + growth: {Math.round(charLevel * 14 * charMult)} {totalArtHpPercent > 0 ? ` (+${Math.round(totalArtHpPercent * 100)}% artifact)` : ''} {pBuffs.hp > 0 ? ` (+${Math.round(pBuffs.hp * 100)}% portrait)` : ''}
                     </span>
                   </div>
 
@@ -656,7 +1091,7 @@ export default function InventoryManager({
                       </span>
                     </div>
                     <span className="text-xs text-slate-500 font-mono lowercase tracking-wide mt-1">
-                      base: {Math.round(selectedChar.baseStats.def * charMult)} + growth: {Math.round(charLevel * 2.4 * charMult)} DEF
+                      base: {Math.round(selectedChar.baseStats.def * charMult)} + growth: {Math.round(charLevel * 2.4 * charMult)} DEF {pBuffs.def > 0 ? ` (+${Math.round(pBuffs.def * 100)}% portrait)` : ''}
                     </span>
                   </div>
 
@@ -669,12 +1104,12 @@ export default function InventoryManager({
                       </span>
                     </div>
                     <span className="text-xs text-slate-500 font-mono lowercase tracking-wide mt-1">
-                      base: {(selectedChar.baseStats.critRate * 100).toFixed(1)}% + weapon bonus: {(bonusCritRate * 100).toFixed(1)}%
+                      base: {(selectedChar.baseStats.critRate * 100).toFixed(1)}% + weapon: {(bonusCritRate * 100).toFixed(1)}% {totalArtCritRate > 0 ? ` + artifact: +${(totalArtCritRate * 100).toFixed(1)}%` : ''}
                     </span>
                   </div>
 
                   {/* CRIT DMG */}
-                  <div className="flex flex-col pb-1.5">
+                  <div className="flex flex-col border-b border-white/5 pb-2.5">
                     <div className="flex justify-between items-center">
                       <span className="text-xs text-slate-300 font-extrabold uppercase tracking-wide">Critical Damage Multiplier</span>
                       <span className="font-mono text-lg font-black text-cyan-400">
@@ -682,7 +1117,20 @@ export default function InventoryManager({
                       </span>
                     </div>
                     <span className="text-xs text-slate-500 font-mono lowercase tracking-wide mt-1">
-                      base: {(selectedChar.baseStats.critDmg * 100).toFixed(1)}% + weapon bonus: {(bonusCritDmg * 100).toFixed(1)}%
+                      base: {(selectedChar.baseStats.critDmg * 100).toFixed(1)}% + weapon: {(bonusCritDmg * 100).toFixed(1)}% {totalArtCritDmg > 0 ? ` + artifact: +${(totalArtCritDmg * 100).toFixed(1)}%` : ''}
+                    </span>
+                  </div>
+
+                  {/* COOLDOWN REDUCTION */}
+                  <div className="flex flex-col pb-1.5">
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-300 font-extrabold uppercase tracking-wide">Cooldown Reduction (CDR)</span>
+                      <span className="font-mono text-lg font-black text-violet-400">
+                        -{finalCdReduction.toFixed(0)}%
+                      </span>
+                    </div>
+                    <span className="text-xs text-slate-500 font-mono lowercase tracking-wide mt-1">
+                      artifact chrono set bonus: -{finalCdReduction.toFixed(0)}% skill cooldown duration
                     </span>
                   </div>
                 </div>
@@ -891,6 +1339,190 @@ export default function InventoryManager({
                 </button>
               </div>
             )}
+
+            {/* --- EQUIPPED ARTIFACTS SLOT INTERFACE --- */}
+            <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+                  <h4 className="text-sm font-black text-white uppercase tracking-widest font-display">
+                    Equipped Artifact Gear Slots
+                  </h4>
+                </div>
+                {/* Active Set Bonuses Display */}
+                {equippedArts.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 justify-end">
+                    {Object.entries(setCounts).map(([setName, count]) => {
+                      if (count >= 2) {
+                        const countText = count >= 4 ? "4-PC" : "2-PC";
+                        return (
+                          <span key={setName} className="text-[8px] font-black uppercase text-amber-300 bg-amber-400/10 border border-amber-400/20 px-1.5 py-0.5 rounded font-mono">
+                            {setName} {countText}
+                          </span>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+                )}
+              </div>
+              <p className="text-xs text-slate-400 lowercase font-mono">
+                equip 4 artifacts (helmet, hands, leg, shoe) to receive HP, Damage, CRIT, and CD reductions.
+              </p>
+
+              {/* Slots Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {(['helmet', 'hands', 'leg', 'shoe'] as ArtifactSlot[]).map((slot) => {
+                  const artId = equippedArtifactIds[slot];
+                  const art = artId ? inventoryArtifacts.find(a => a.id === artId) : null;
+                  const isSelecting = activeEquipSlot === slot;
+                  const mainStatLabel = slot === 'helmet' ? 'HP%' :
+                                        slot === 'hands' ? 'DMG%' :
+                                        slot === 'leg' ? 'CRIT Rate%' : 'CRIT DMG%';
+
+                  return (
+                    <div key={slot} className="bg-black/35 border border-white/10 rounded-xl p-4 space-y-3 relative overflow-hidden flex flex-col justify-between">
+                      <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${
+                            art ? (
+                              art.rarity === 5 ? 'bg-gradient-to-tr from-amber-600 to-amber-350 text-slate-955 font-black' :
+                              art.rarity === 4 ? 'bg-gradient-to-tr from-purple-600 to-purple-400 text-white' :
+                              'bg-gradient-to-tr from-blue-600 to-blue-400 text-white'
+                            ) : 'bg-white/5 text-slate-500 border border-white/5'
+                          }`}>
+                            {slot.substring(0, 3).toUpperCase()}
+                          </div>
+                          <div>
+                            <span className="text-[8px] font-black uppercase text-amber-500 font-mono tracking-wider">
+                              {slot} slot ({mainStatLabel})
+                            </span>
+                            <h5 className="text-xs font-bold text-slate-200 truncate max-w-[140px]">
+                              {art ? art.name : 'Empty Slot'}
+                            </h5>
+                          </div>
+                        </div>
+
+                        {art && (
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => {
+                                onLockArtifact && onLockArtifact(art.id, !art.isLocked);
+                                AetheriaAudioEngine.playClick();
+                              }}
+                              className="p-1 hover:bg-white/5 rounded text-slate-450 hover:text-white"
+                              title={art.isLocked ? "Unlock" : "Lock"}
+                            >
+                              {art.isLocked ? <Lock className="w-3.5 h-3.5 text-amber-400" /> : <Unlock className="w-3.5 h-3.5 text-slate-500" />}
+                            </button>
+                            <button
+                              onClick={() => {
+                                onEquipArtifact && onEquipArtifact(selectedChar.id, slot, null);
+                                AetheriaAudioEngine.playClick();
+                              }}
+                              className="text-[9px] bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-500/20 px-1.5 py-0.5 rounded font-black uppercase font-mono transition-all"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        )}
+
+                        {!art && !isSelecting && (
+                          <button
+                            onClick={() => {
+                              setActiveEquipSlot(slot);
+                              setArtifactEquipSearch('');
+                              AetheriaAudioEngine.playClick();
+                            }}
+                            className="text-[9px] bg-amber-400 hover:bg-amber-350 text-slate-950 px-2 py-0.5 rounded font-black uppercase font-mono transition-all"
+                          >
+                            Equip
+                          </button>
+                        )}
+                      </div>
+
+                      {art && (
+                        <div className="text-[10px] text-slate-400 font-mono">
+                          <span>Set: {art.set} • Stats: {getArtifactMainStat(slot, art.rarity).display}</span>
+                        </div>
+                      )}
+
+                      {/* Inline Equip Selector dropdown */}
+                      {isSelecting && (
+                        <div className="mt-3 pt-3 border-t border-white/5 space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[9px] font-black text-amber-400 uppercase tracking-widest">Select {slot} Artifact:</span>
+                            <button
+                              onClick={() => {
+                                setActiveEquipSlot(null);
+                                AetheriaAudioEngine.playClick();
+                              }}
+                              className="text-[10px] text-slate-400 hover:text-white"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                          
+                          {/* Search bar inside equip */}
+                          <input
+                            type="text"
+                            value={artifactEquipSearch}
+                            onChange={(e) => setArtifactEquipSearch(e.target.value)}
+                            placeholder="Search compatible artifacts..."
+                            className="w-full bg-slate-900/60 border border-white/10 hover:border-white/20 focus:border-amber-400 rounded px-2 py-0.5 text-[10px] text-slate-200 focus:outline-none transition-all uppercase tracking-wide font-mono font-bold"
+                          />
+
+                          <div className="space-y-1.5 max-h-[140px] overflow-y-auto pr-1">
+                            {(() => {
+                              const compatibleArts = inventoryArtifacts.filter(a => {
+                                if (a.slot !== slot) return false;
+                                return a.name.toLowerCase().includes(artifactEquipSearch.toLowerCase()) || 
+                                  a.set.toLowerCase().includes(artifactEquipSearch.toLowerCase());
+                              });
+
+                              if (compatibleArts.length === 0) {
+                                return (
+                                  <div className="text-[9px] text-slate-550 text-slate-500 italic py-2 text-center uppercase">
+                                    No compatible artifacts in inventory
+                                  </div>
+                                );
+                              }
+
+                              return compatibleArts.map(a => {
+                                const stats = getArtifactMainStat(a.slot, a.rarity);
+                                const ownerName = a.equippedTo ? (PLAYABLE_CHARACTERS.find(c => c.id === a.equippedTo)?.name || a.equippedTo) : null;
+                                
+                                return (
+                                  <button
+                                    key={a.id}
+                                    onClick={() => {
+                                      onEquipArtifact && onEquipArtifact(selectedChar.id, slot, a.id);
+                                      setActiveEquipSlot(null);
+                                      AetheriaAudioEngine.playClick();
+                                    }}
+                                    className="w-full text-left p-1.5 rounded bg-black/40 hover:bg-[#0e1628] border border-white/5 hover:border-indigo-500/30 flex justify-between items-center text-[10px] transition-all"
+                                  >
+                                    <div className="min-w-0 flex-1">
+                                      <div className="font-extrabold truncate text-white">{a.name}</div>
+                                      <div className="text-[8px] text-slate-400 uppercase font-mono">
+                                        {a.set} • {stats.display} {ownerName ? `[${ownerName}]` : ''}
+                                      </div>
+                                    </div>
+                                    <span className="text-[8px] bg-indigo-500/10 text-indigo-400 px-1 py-0.5 rounded font-black uppercase shrink-0 font-mono">
+                                      {ownerName ? 'Steal' : 'Equip'}
+                                    </span>
+                                  </button>
+                                );
+                              });
+                            })()}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
 
             {/* --- ELEMENTAL REACTIONS CHEAT SHEET --- BELOW CHARACTER --- */}
             <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
@@ -1115,6 +1747,7 @@ export default function InventoryManager({
             </div>
 
           </div>
+          )}
 
           <div className="text-[10px] text-slate-500 text-center mt-6 border-t border-white/5 pt-4 uppercase font-mono">
             *Ultimate metrics scale with active Forge levels. Armaments and level-up milestones amplify weapon stats and passive potentials every 5 levels!

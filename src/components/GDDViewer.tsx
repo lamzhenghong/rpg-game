@@ -10,8 +10,9 @@ import { PLAYABLE_CHARACTERS } from '../data/characters';
 import { WEAPONS_DATABASE } from '../data/weapons';
 import { AetheriaAudioEngine } from '../utils/audio';
 import { getPortraitInfoList } from '../utils/portraits';
-import { Shield, Sparkles, BookOpen, Compass, Sword, Landmark, Hammer, Coins, Trophy, DollarSign, Image, Eye, User, Star, Flame, Droplet, Snowflake, Zap, Wind, Mountain, Leaf, Check } from 'lucide-react';
-import { ElementType, WeaponType, Weapon } from '../types';
+import { Shield, Sparkles, BookOpen, Compass, Sword, Landmark, Hammer, Coins, Trophy, DollarSign, Image, Eye, User, Star, Flame, Droplet, Snowflake, Zap, Wind, Mountain, Leaf, Check, Layers } from 'lucide-react';
+import { ElementType, WeaponType, Weapon, Artifact, ArtifactSlot, ArtifactSet } from '../types';
+import { ARTIFACT_SETS, ARTIFACT_NAMES, getArtifactMainStat } from '../data/artifacts';
 import { LanguageType, t } from '../utils/i18n';
 
 import aureliaBanner from '../../assets/aurelia_banner.png';
@@ -66,10 +67,11 @@ interface GDDViewerProps {
   ownedCharacterIds: string[];
   characterPortraits?: Record<string, number>;
   inventoryWeapons?: Weapon[];
+  inventoryArtifacts?: Artifact[];
   language?: LanguageType;
   unlockedLoreEntries?: string[];
   completedCharacterStoryActs?: Record<string, number>;
-  initialTab?: 'lore' | 'nations' | 'characters' | 'weapons' | 'systems' | 'tutorial';
+  initialTab?: 'lore' | 'nations' | 'characters' | 'weapons' | 'artifacts' | 'systems' | 'tutorial';
   initialCharacterId?: string;
   initialWeaponName?: string;
 }
@@ -79,6 +81,7 @@ export default function GDDViewer({
   ownedCharacterIds, 
   characterPortraits = {}, 
   inventoryWeapons = [], 
+  inventoryArtifacts = [],
   initialTab,
   initialCharacterId,
   initialWeaponName,
@@ -86,7 +89,7 @@ export default function GDDViewer({
   unlockedLoreEntries = [],
   completedCharacterStoryActs = {}
 }: GDDViewerProps) {
-  const [activeTab, setActiveTab] = React.useState<'lore' | 'nations' | 'characters' | 'weapons' | 'systems' | 'tutorial'>(initialTab || 'lore');
+  const [activeTab, setActiveTab] = React.useState<'lore' | 'nations' | 'characters' | 'weapons' | 'artifacts' | 'systems' | 'tutorial'>(initialTab || 'lore');
   const [selectedCharacterId, setSelectedCharacterId] = React.useState<string>(initialCharacterId || PLAYABLE_CHARACTERS[0].id);
   const [selectedWeaponName, setSelectedWeaponName] = useState<string>(initialWeaponName || WEAPONS_DATABASE[0].name);
   const [selectedNationName, setSelectedNationName] = useState<string>(GDD_DATA.nations[0].name);
@@ -97,6 +100,10 @@ export default function GDDViewer({
   const [charElementFilter, setCharElementFilter] = useState<'all' | ElementType>('all');
   const [weapOwnershipFilter, setWeapOwnershipFilter] = useState<'all' | 'owned' | 'unowned'>('all');
   const [weapRarityFilter, setWeapRarityFilter] = useState<'all' | 5 | 4 | 3>('all');
+  const [artSetFilter, setArtSetFilter] = useState<'all' | ArtifactSet>('all');
+  const [artSlotFilter, setArtSlotFilter] = useState<'all' | ArtifactSlot>('all');
+  const [artRarityFilter, setArtRarityFilter] = useState<'all' | 5 | 4 | 3>('all');
+  const [selectedArtifactSetName, setSelectedArtifactSetName] = useState<ArtifactSet>('Vanguard');
 
   React.useEffect(() => {
     if (initialTab) {
@@ -175,7 +182,7 @@ export default function GDDViewer({
 
         {/* Tabs switcher */}
         <div className="flex overflow-x-auto whitespace-nowrap scrollbar-none gap-1 bg-black/45 p-1 rounded-lg border border-white/10 w-full">
-          {(['lore', 'nations', 'characters', 'weapons', 'systems', 'tutorial'] as const).map((tab) => (
+          {(['lore', 'nations', 'characters', 'weapons', 'artifacts', 'systems', 'tutorial'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -186,7 +193,7 @@ export default function GDDViewer({
               }`}
               id={`gdd_tab_${tab}`}
             >
-              {tab === 'tutorial' ? 'How to Play' : tab}
+              {tab === 'tutorial' ? 'How to Play' : tab === 'artifacts' ? t('artifacts', language) : tab}
             </button>
           ))}
         </div>
@@ -1013,6 +1020,188 @@ export default function GDDViewer({
                           Tempered of Aetheria's core, this {weap.weaponType} can be equipped on any hero aligned to the {weap.weaponType} class. Upgrade weapon level inside the **Hero Forge** panel to amplify the base attack and fully unlock stat scaling inside Combat Arena!
                         </p>
                       </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+            </motion.div>
+          )}
+
+          {activeTab === 'artifacts' && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.2 }}
+              className="grid grid-cols-1 md:grid-cols-4 gap-6"
+              key="tab_artifacts"
+            >
+              {/* Left sidebar: Artifact Sets catalog */}
+              <div className="space-y-1.5 overflow-y-auto max-h-[500px] pr-1 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
+                <div className="flex items-center justify-between px-2 mb-1">
+                  <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                    Artifact Sets
+                  </h4>
+                </div>
+                
+                {/* Search / Set select filter */}
+                <div className="px-2 mb-2">
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+                    Filter by slot
+                  </div>
+                  <div className="flex flex-wrap gap-1 mb-3">
+                    {(['all', 'helmet', 'hands', 'leg', 'shoe'] as const).map((slotOpt) => (
+                      <button
+                        key={slotOpt}
+                        onClick={() => {
+                          setArtSlotFilter(slotOpt);
+                          AetheriaAudioEngine.playClick();
+                        }}
+                        className={`text-center px-2 py-1 text-[9px] font-bold uppercase tracking-wider rounded-md border transition-all ${
+                          artSlotFilter === slotOpt
+                            ? 'bg-amber-500/20 border-amber-500/50 text-amber-300 shadow-sm shadow-amber-500/10'
+                            : 'bg-slate-900/40 border-white/5 hover:border-white/15 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        {slotOpt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Sets list buttons */}
+                {(() => {
+                  const setsList: ArtifactSet[] = ['Vanguard', 'Guardian', 'Celestial', 'Chrono'];
+                  return setsList.map((setName) => {
+                    const setInfo = ARTIFACT_SETS[setName];
+                    const isSelected = selectedArtifactSetName === setName;
+                    return (
+                      <button
+                        key={setName}
+                        onClick={() => {
+                          setSelectedArtifactSetName(setName);
+                          AetheriaAudioEngine.playClick();
+                        }}
+                        className={`w-full text-left p-2.5 rounded-xl border transition-all flex items-center justify-between cursor-pointer ${
+                          isSelected
+                            ? 'bg-slate-800 border-slate-700 shadow text-slate-100'
+                            : 'bg-slate-900/30 border-slate-900/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className="w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs text-slate-950 bg-gradient-to-tr from-amber-500 to-amber-300">
+                            <Layers className="w-4 h-4 text-slate-900" />
+                          </div>
+                          <div>
+                            <div className="font-bold text-xs">
+                              {setInfo.name}
+                            </div>
+                            <div className="text-[9px] font-semibold text-slate-400 uppercase font-mono">
+                              {setName} Set
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  });
+                })()}
+              </div>
+
+              {/* Right side: Selected set details and slot stats */}
+              {(() => {
+                const setName = selectedArtifactSetName;
+                const setInfo = ARTIFACT_SETS[setName];
+                
+                return (
+                  <div className="md:col-span-3 space-y-6">
+                    <div className="p-6 rounded-2xl border border-slate-800/80 relative overflow-hidden bg-slate-950/90 shadow-xl">
+                      <div className="relative z-10 space-y-4">
+                        {/* Title and set descriptions */}
+                        <div className="border-b border-slate-900 pb-4">
+                          <h3 className="text-xl font-black tracking-wide text-slate-100 flex items-center gap-2">
+                            <Layers className="w-5 h-5 text-amber-400" />
+                            {setInfo.name}
+                          </h3>
+                          <p className="text-[10px] text-slate-500 uppercase tracking-widest font-mono font-bold mt-1">
+                            Set Bonus Matrix
+                          </p>
+                          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div className="bg-amber-400/5 border border-amber-400/10 p-3 rounded-xl">
+                              <span className="text-[9px] font-bold text-amber-400 uppercase tracking-wider block font-mono">2-Piece Set Effect</span>
+                              <p className="text-xs text-slate-350 mt-1 font-bold">{setInfo.desc2pc}</p>
+                            </div>
+                            <div className="bg-amber-400/10 border border-amber-400/20 p-3 rounded-xl shadow-[0_0_15px_rgba(251,191,36,0.05)]">
+                              <span className="text-[9px] font-bold text-amber-300 uppercase tracking-wider block font-mono">4-Piece Set Effect</span>
+                              <p className="text-xs text-amber-200 mt-1 font-extrabold">{setInfo.desc4pc}</p>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Parts Grid */}
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">
+                            Set Artifact Parts
+                          </h4>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {(['helmet', 'hands', 'leg', 'shoe'] as ArtifactSlot[]).map((slot) => {
+                              // If a slot filter is set and it doesn't match, skip rendering this part
+                              if (artSlotFilter !== 'all' && artSlotFilter !== slot) return null;
+                              
+                              const partName = ARTIFACT_NAMES[setName][slot];
+                              
+                              // Main stats details
+                              const mainStatDesc = slot === 'helmet' ? 'HP%' :
+                                                   slot === 'hands' ? 'DMG%' :
+                                                   slot === 'leg' ? 'CRIT Chance%' : 'CRIT DMG%';
+                                                   
+                              const blueStat = getArtifactMainStat(slot, 3);
+                              const purpleStat = getArtifactMainStat(slot, 4);
+                              const goldStat = getArtifactMainStat(slot, 5);
+                              
+                              return (
+                                <div key={slot} className="bg-slate-900/40 border border-slate-900 rounded-xl p-3.5 space-y-2.5 hover:border-slate-800/80 transition-all">
+                                  <div className="flex items-start justify-between">
+                                    <div>
+                                      <span className="text-[8px] font-black uppercase text-amber-500 font-mono tracking-wider bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded">
+                                        {slot} Slot
+                                      </span>
+                                      <h5 className="text-xs font-bold text-slate-200 mt-1">{partName}</h5>
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Stats scaling table */}
+                                  <div className="space-y-1 bg-black/20 p-2 rounded-lg border border-white/5">
+                                    <div className="flex justify-between text-[9px] text-slate-400 font-mono font-bold border-b border-white/5 pb-1">
+                                      <span>Rarity</span>
+                                      <span>Main Stat Value ({mainStatDesc})</span>
+                                    </div>
+                                    <div className="flex justify-between text-[10px] py-0.5">
+                                      <span className="text-blue-400 font-bold">Blue (Common)</span>
+                                      <span className="text-blue-300 font-mono font-bold">{blueStat.display}</span>
+                                    </div>
+                                    <div className="flex justify-between text-[10px] py-0.5">
+                                      <span className="text-purple-400 font-bold">Purple (Rare)</span>
+                                      <span className="text-purple-300 font-mono font-bold">{purpleStat.display}</span>
+                                    </div>
+                                    <div className="flex justify-between text-[10px] py-0.5">
+                                      <span className="text-amber-400 font-bold">Gold (Legendary)</span>
+                                      <span className="text-amber-300 font-mono font-bold">{goldStat.display}</span>
+                                    </div>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Drop / grind mechanics lore guide */}
+                        <div className="p-4 bg-slate-900/20 border border-slate-800 rounded-xl space-y-1.5">
+                          <span className="text-[8.5px] uppercase font-mono text-slate-500 block font-bold">Artifact Acquisition & Forge Integration</span>
+                          <p className="text-[11px] text-slate-400 leading-relaxed">
+                            Artifacts are rare armor modifications that provide significant percentage boosts. Equip up to 4 parts (Helmet, Hands, Leg, Shoe) per character under the **Hero Forge & Ascension** tab. Grind artifacts in the new **Artifact Grind** endless game mode where higher waves grant increasing chances of Purple and Gold rarities! Lock artifacts to prevent deletion, and salvage extras for extra resources.
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>

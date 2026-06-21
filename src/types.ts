@@ -57,6 +57,19 @@ export interface Weapon {
   equippedTo?: string; // Character ID
 }
 
+export type ArtifactSlot = 'helmet' | 'hands' | 'leg' | 'shoe';
+export type ArtifactSet = 'Vanguard' | 'Guardian' | 'Celestial' | 'Chrono';
+
+export interface Artifact {
+  id: string;
+  name: string;
+  slot: ArtifactSlot;
+  set: ArtifactSet;
+  rarity: 3 | 4 | 5; // 3 = Blue (Common), 4 = Purple (Rare), 5 = Gold (Legendary)
+  isLocked?: boolean;
+  equippedTo?: string; // Character ID
+}
+
 export interface CombatCharacter {
   id: string; // Template ID
   name: string;
@@ -91,6 +104,7 @@ export interface CombatCharacter {
   debateClubCd?: number;
   scepterBubbleCd?: number;
   spearDoubleCd?: number;
+  cooldownReduction?: number;
 }
 
 export interface Quest {
@@ -135,12 +149,14 @@ export interface SaveState {
   playerExp?: number;
   playerExpMax?: number;
   inventoryWeapons: Weapon[];
+  inventoryArtifacts?: Artifact[];
   inventoryItems: InventoryItem[];
   unlockedCharacterIds: string[];
   characterLevels: Record<string, number>; // id -> level
   characterPortraits?: Record<string, number>; // id -> portrait level (0-6)
   characterHp: Record<string, number>; // id -> hp
   characterEquippedWeapon: Record<string, string>; // characterId -> weaponInstanceId
+  characterEquippedArtifacts?: Record<string, Record<string, string>>; // characterId -> { slot -> artifactInstanceId }
   partyIds: string[]; // Length up to 4
   activeQuests: Quest[];
   completedQuestIds: string[];

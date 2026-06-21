@@ -37,6 +37,12 @@ export const TRANSLATIONS: Record<string, Record<LanguageType, string>> = {
     zh: '锻造与突破',
     ko: '단조 및 돌파'
   },
+  'artifacts': {
+    en: 'Artifacts',
+    jp: '聖遺物',
+    zh: '圣遗物',
+    ko: '성유물'
+  },
   'celestial_summons': {
     en: 'Celestial Summons',
     jp: '天の召喚',

@@ -5,17 +5,18 @@
 
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { PLAYABLE_CHARACTERS } from '../data/characters';
-import { PlayableCharacter, ElementType, CombatCharacter, Weapon } from '../types';
+import { PlayableCharacter, ElementType, CombatCharacter, Weapon, Artifact, ArtifactSlot, ArtifactSet } from '../types';
 import { 
   Sword, Zap, ShieldAlert, Sparkles, HelpCircle, Trophy, RefreshCw, RefreshCcw, 
   Swords, Plus, Star, Pause, Play, Volume2, VolumeX, Save, Home, BookOpen,
-  Sun, CloudRain, CloudLightning, Snowflake
+  Sun, CloudRain, CloudLightning, Snowflake, Layers
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AetheriaAudioEngine } from '../utils/audio';
 import { LanguageType, t } from '../utils/i18n';
 import { getAccumulatedPortraitBuffs } from '../utils/portraits';
 import { WEAPONS_DATABASE } from '../data/weapons';
+import { getArtifactMainStat, generateRandomArtifact } from '../data/artifacts';
 import MobileJoystick from './MobileJoystick';
 import MobileControls from './MobileControls';
 import { getStageSpec } from '../data/storyStages';
@@ -39,6 +40,9 @@ interface CombatArenaProps {
   characterLevels?: Record<string, number>;
   characterEquippedWeapon?: Record<string, string>;
   inventoryWeapons?: Weapon[];
+  inventoryArtifacts?: Artifact[];
+  characterEquippedArtifacts?: Record<string, Record<string, string>>;
+  onAwardArtifact?: (artifact: Artifact) => void;
   characterPortraits?: Record<string, number>;
   devCheatsEnabled?: boolean;
   screenShakeEnabled?: boolean;
@@ -227,6 +231,9 @@ export default function CombatArena({
   characterLevels = {},
   characterEquippedWeapon = {},
   inventoryWeapons = [],
+  inventoryArtifacts = [],
+  characterEquippedArtifacts = {},
+  onAwardArtifact,
   characterPortraits = {},
   devCheatsEnabled = true,
   screenShakeEnabled = true,
@@ -351,6 +358,9 @@ export default function CombatArena({
   const [bossHp, setBossHp] = useState<number | null>(null);
   const [bossMaxHp, setBossMaxHp] = useState<number>(25000);
   const [bossName, setBossName] = useState<string>('');
+  const [isArtifactGrindMode, setIsArtifactGrindMode] = useState<boolean>(false);
+  const [droppedArtifacts, setDroppedArtifacts] = useState<Artifact[]>([]);
+  const [activeArtifactNotification, setActiveArtifactNotification] = useState<string | null>(null);
   const bossProjectilesRef = useRef<any[]>([]);
   const hasRevivedRef = useRef<boolean>(false);
 
@@ -647,17 +657,90 @@ export default function CombatArena({
         const pLvl = characterPortraits?.[charTemplate.id] || 0;
         const pBuffs = getAccumulatedPortraitBuffs(charTemplate.id, pLvl);
 
+        // --- ARTIFACT STATS CALCULATION ---
+        const equippedArtifactIds = characterEquippedArtifacts?.[charTemplate.id] || {};
+        const equippedArts = Object.entries(equippedArtifactIds)
+          .map(([slot, artId]) => inventoryArtifacts.find(a => a.id === artId))
+          .filter((a): a is Artifact => !!a);
+
+        const setCounts: Record<ArtifactSet, number> = {
+          Vanguard: 0,
+          Guardian: 0,
+          Celestial: 0,
+          Chrono: 0
+        };
+        equippedArts.forEach(art => {
+          if (art.set in setCounts) {
+            setCounts[art.set]++;
+          }
+        });
+
+        let artBonusHpPercent = 0;
+        let artBonusDmgPercent = 0;
+        let artBonusCritRate = 0;
+        let artBonusCritDmg = 0;
+        let artBonusCdReduction = 0;
+
+        if (setCounts.Guardian >= 4) {
+          artBonusHpPercent += 0.55;
+        } else if (setCounts.Guardian >= 2) {
+          artBonusHpPercent += 0.20;
+        }
+
+        if (setCounts.Vanguard >= 4) {
+          artBonusDmgPercent += 0.45;
+        } else if (setCounts.Vanguard >= 2) {
+          artBonusDmgPercent += 0.15;
+        }
+
+        if (setCounts.Celestial >= 4) {
+          artBonusCritRate += 0.25;
+          artBonusCritDmg += 0.55;
+        } else if (setCounts.Celestial >= 2) {
+          artBonusCritRate += 0.10;
+          artBonusCritDmg += 0.20;
+        }
+
+        if (setCounts.Chrono >= 4) {
+          artBonusCdReduction += 0.30;
+        } else if (setCounts.Chrono >= 2) {
+          artBonusCdReduction += 0.10;
+        }
+
+        let artSlotHpPercent = 0;
+        let artSlotDmgPercent = 0;
+        let artSlotCritRate = 0;
+        let artSlotCritDmg = 0;
+
+        equippedArts.forEach(art => {
+          const stat = getArtifactMainStat(art.slot, art.rarity);
+          if (art.slot === 'helmet') {
+            artSlotHpPercent += stat.value;
+          } else if (art.slot === 'hands') {
+            artSlotDmgPercent += stat.value;
+          } else if (art.slot === 'leg') {
+            artSlotCritRate += stat.value;
+          } else if (art.slot === 'shoe') {
+            artSlotCritDmg += stat.value;
+          }
+        });
+
+        const totalArtHpPercent = artBonusHpPercent + artSlotHpPercent;
+        const totalArtDmgPercent = artBonusDmgPercent + artSlotDmgPercent;
+        const totalArtCritRate = artBonusCritRate + artSlotCritRate;
+        const totalArtCritDmg = artBonusCritDmg + artSlotCritDmg;
+
         let baseHp = calculatedHp;
         let baseDef = calculatedDef;
-        let baseAtk = calculatedAtk * (1 + bonusAtkPercent);
+        let baseAtk = calculatedAtk * (1 + bonusAtkPercent + totalArtDmgPercent);
         if (has2Pyro) {
           baseAtk = Math.round(baseAtk * 1.15);
         }
-        let baseCritRate = charTemplate.baseStats.critRate + bonusCritRate;
-        let baseCritDmg = charTemplate.baseStats.critDmg + bonusCritDmg;
+        let baseCritRate = charTemplate.baseStats.critRate + bonusCritRate + totalArtCritRate;
+        let baseCritDmg = charTemplate.baseStats.critDmg + bonusCritDmg + totalArtCritDmg;
 
         // Apply Portrait buffs
-        baseHp = Math.round(baseHp * (1 + pBuffs.hp));
+        baseHp = Math.round(baseHp * (1 + pBuffs.hp + totalArtHpPercent));
         baseDef = Math.round(baseDef * (1 + pBuffs.def));
         baseAtk = Math.round(baseAtk * (1 + pBuffs.atk));
         baseCritRate += pBuffs.critRate;
@@ -714,7 +797,8 @@ export default function CombatArena({
           debateClubTimer: 0,
           debateClubCd: 0,
           scepterBubbleCd: 0,
-          spearDoubleCd: 0
+          spearDoubleCd: 0,
+          cooldownReduction: artBonusCdReduction
         });
       }
     });
@@ -981,7 +1065,10 @@ export default function CombatArena({
         setBossHp(null);
       }
     } else {
-      if (waveNum % 5 === 0) {
+      const isGrindBossWave = isArtifactGrindMode && waveNum % 10 === 0;
+      const isNormalBossWave = !isArtifactGrindMode && waveNum % 5 === 0;
+      
+      if (isGrindBossWave || isNormalBossWave) {
         setSpawnerPreset('boss');
         const scaleMultiplier = Math.max(1, 1 + (waveNum - 5) * 0.25);
         const boss = spawnRandomBoss('world_boss_' + Date.now(), scaleMultiplier);
@@ -1273,6 +1360,7 @@ export default function CombatArena({
         if (has2Electro) cdMultiplier *= 0.80;
         if (has2Anemo) cdMultiplier *= 0.85;
         if (hasSearingBlade) cdMultiplier *= 0.80;
+        if (c.cooldownReduction) cdMultiplier *= (1 - c.cooldownReduction);
 
         const skillCdMax = 10.0 * cdMultiplier;
 
@@ -1948,12 +2036,29 @@ export default function CombatArena({
           onAddItems?.('char_xp', witReward);
           spawnFloatingDamageText(playerRef.current.x, playerRef.current.y - 60, `📖 +${witReward} Hero's Wit`, '#a78bfa', 13, true);
 
+          // If in Artifact Grind Mode, drop a random artifact!
+          let artifactMessage = '';
+          if (isArtifactGrindMode) {
+            const newArt = generateRandomArtifact(currentWave);
+            setDroppedArtifacts(prev => [...prev, newArt]);
+            if (onAwardArtifact) {
+              onAwardArtifact(newArt);
+            }
+            const rarityStr = newArt.rarity === 5 ? 'Gold 5★' : newArt.rarity === 4 ? 'Purple 4★' : 'Blue 3★';
+            setActiveArtifactNotification(`🎉 Artifact Dropped: ${newArt.name} (${rarityStr})`);
+            spawnFloatingDamageText(playerRef.current.x, playerRef.current.y - 90, `✨ DROPPED: ${newArt.name}!`, '#fbbf24', 14, true);
+            setTimeout(() => {
+              setActiveArtifactNotification(null);
+            }, 3000);
+            artifactMessage = ` • 📦 Artifact Dropped: ${newArt.name}`;
+          }
+
           const nextWave = currentWave + 1;
           if (onUpdateHighScore) {
             onUpdateHighScore(currentWave, gameScore + 200);
           }
 
-          setWaveClearMessage(`WAVE ${currentWave} SECURED! +${rewardGems} Gems / +${rewardMora} Mora / +${rewardExp} XP`);
+          setWaveClearMessage(`WAVE ${currentWave} SECURED! +${rewardGems} Gems / +${rewardMora} Mora / +${rewardExp} XP${artifactMessage}`);
           setTimeout(() => {
             setWaveClearMessage(null);
             triggerSpawnWave(nextWave);
@@ -3381,6 +3486,8 @@ export default function CombatArena({
     setStoryStarsEarned(0);
     setStoryElapsedSecs(0);
     characterDeathsRef.current = 0;
+    setDroppedArtifacts([]);
+    setActiveArtifactNotification(null);
     
     setCombatParty(pList => pList.map(c => ({
       ...c,
@@ -3643,6 +3750,21 @@ export default function CombatArena({
           </div>
         )}
 
+        {/* ARTIFACT DROPPED NOTIFICATION */}
+        {activeArtifactNotification && (
+          <div className="absolute top-24 left-1/2 -translate-x-1/2 z-50 animate-fade-in pointer-events-none max-w-sm w-full px-4">
+            <div className="bg-[#0b1329]/95 border border-amber-400/40 p-3 rounded-xl flex items-center gap-3 shadow-[0_0_20px_rgba(251,191,36,0.25)] backdrop-blur-md">
+              <div className="w-8 h-8 rounded-lg bg-amber-400/10 border border-amber-400/20 flex items-center justify-center">
+                <Layers className="w-4 h-4 text-amber-400" />
+              </div>
+              <div>
+                <span className="text-[8px] font-black text-amber-400 uppercase tracking-widest font-mono block">Incursion Loot Dropped</span>
+                <p className="text-[10px] text-white font-extrabold uppercase">{activeArtifactNotification}</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Dynamic active Boss Red Healthbar */}
         {spawnerPreset === 'boss' && bossHp !== null && (
           <div className="absolute top-4 left-1/2 -translate-x-1/2 max-w-lg w-full px-4 z-40">
@@ -3739,6 +3861,45 @@ export default function CombatArena({
                     ))}
                   </div>
                 </div>
+
+                {!storyMode && !dungeonMode && (
+                  <div className="bg-black/45 border border-white/5 p-3 rounded-xl space-y-2">
+                    <span className="text-[9px] text-slate-500 uppercase block font-black text-left font-mono border-b border-white/5 pb-1">Select Battle Mode:</span>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => {
+                          setIsArtifactGrindMode(false);
+                          AetheriaAudioEngine.playClick();
+                        }}
+                        className={`flex-1 py-2 text-xs font-black rounded-lg border transition-all ${
+                          !isArtifactGrindMode 
+                            ? 'bg-indigo-650 border-indigo-400 text-white shadow-md'
+                            : 'bg-slate-900/40 border-white/5 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        Endless Arena
+                      </button>
+                      <button
+                        onClick={() => {
+                          setIsArtifactGrindMode(true);
+                          AetheriaAudioEngine.playClick();
+                        }}
+                        className={`flex-1 py-2 text-xs font-black rounded-lg border transition-all ${
+                          isArtifactGrindMode 
+                            ? 'bg-amber-500 border-amber-400 text-slate-950 shadow-md shadow-amber-500/25 font-black'
+                            : 'bg-slate-900/40 border-white/5 text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        Artifact Grind
+                      </button>
+                    </div>
+                    <p className="text-[9px] text-slate-400 text-left leading-relaxed font-mono lowercase">
+                      {isArtifactGrindMode 
+                        ? "📦 Drop random Blue/Purple/Gold artifacts each wave clear. Boss encounters emerge at wave 10. Perfect for farming gear sets!"
+                        : "🏆 Traditional score-chase mode. Defeat mobs and bosses to secure raw Aether Gems and character leveling materials."}
+                    </p>
+                  </div>
+                )}
 
                 <div className="flex flex-col gap-2 md:gap-2.5">
                   <button
@@ -3896,6 +4057,32 @@ export default function CombatArena({
                   COMBAT SCORE: <div className="text-lg font-black text-yellow-500">{gameScore} pts</div>
                 </div>
               </div>
+
+              {isArtifactGrindMode && (
+                <div className="border border-white/10 bg-black/50 p-4 rounded-lg text-left space-y-2">
+                  <div className="text-[10px] text-slate-450 uppercase font-mono font-bold text-slate-450">Dropped Artifacts Summary ({droppedArtifacts.length}):</div>
+                  {droppedArtifacts.length > 0 ? (
+                    <div className="space-y-1.5 max-h-[140px] overflow-y-auto pr-1">
+                      {droppedArtifacts.map((art, idx) => (
+                        <div key={idx} className="flex justify-between items-center text-[10px] bg-white/5 px-2 py-1 rounded border border-white/5">
+                          <span className="font-bold text-slate-200 truncate max-w-[190px]">{art.name}</span>
+                          <span className={`text-[8.5px] font-black uppercase px-1 py-0.2 rounded font-mono font-bold ${
+                            art.rarity === 5 ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                            art.rarity === 4 ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' :
+                            'bg-blue-500/10 text-blue-400 border border-blue-500/20'
+                          }`}>
+                            {art.rarity === 5 ? 'Gold' : art.rarity === 4 ? 'Purple' : 'Blue'}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-[10px] text-slate-500 italic py-2 text-center uppercase">
+                      No artifacts secured during this battle.
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="flex flex-col gap-2">
                 {storyMode ? (

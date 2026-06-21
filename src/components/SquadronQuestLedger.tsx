@@ -12,7 +12,14 @@ interface SquadronQuestLedgerProps {
 }
 
 export default function SquadronQuestLedger({ activeQuests, onClaimQuestReward, onClaimAllQuestRewards, layout }: SquadronQuestLedgerProps) {
-  const [activeTab, setActiveTab] = useState<'daily' | 'weekly' | 'normal'>('daily');
+  const [activeTab, setActiveTab] = useState<'daily' | 'weekly' | 'normal'>(() => {
+    if (activeQuests.some(q => q.group === 'daily' && !q.completed)) return 'daily';
+    if (activeQuests.some(q => q.group === 'daily')) return 'daily';
+    if (activeQuests.some(q => q.group === 'weekly' && !q.completed)) return 'weekly';
+    if (activeQuests.some(q => q.group === 'weekly')) return 'weekly';
+    return 'normal';
+  });
+
 
   const dailyQuests = activeQuests.filter(q => q.group === 'daily');
   const weeklyQuests = activeQuests.filter(q => q.group === 'weekly');

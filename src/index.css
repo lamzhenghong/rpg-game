@@ -160,5 +160,22 @@ canvas {
   animation: pop-pulse 1.8s infinite ease-in-out;
 }
 
-
-
+/* Custom scrollbar for mobile tab bar */
+.scrollbar-custom-tabs::-webkit-scrollbar {
+  height: 4px;
+}
+.scrollbar-custom-tabs::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+}
+.scrollbar-custom-tabs::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.35);
+  border-radius: 4px;
+}
+.scrollbar-custom-tabs::-webkit-scrollbar-thumb:hover {
+  background: rgba(99, 102, 241, 0.65);
+}
+.scrollbar-custom-tabs {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(99, 102, 241, 0.35) rgba(255, 255, 255, 0.03);
+}
