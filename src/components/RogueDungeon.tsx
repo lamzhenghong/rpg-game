@@ -27,6 +27,7 @@ interface RogueDungeonProps {
   combatSpeed?: number;
   fpsLimit?: '60' | 'none';
   language?: LanguageType;
+  activeDamageSkin?: string;
 }
 
 const DUNGEON_BUFFS = [
@@ -55,7 +56,8 @@ export default function RogueDungeon({
   screenShakeEnabled = true,
   combatSpeed = 1.0,
   fpsLimit = '60',
-  language = 'en'
+  language = 'en',
+  activeDamageSkin = 'Default'
 }: RogueDungeonProps) {
   // Parse helper for loading state from localStorage
   const getSavedValue = (key: string, defaultValue: any) => {
@@ -379,6 +381,7 @@ export default function RogueDungeon({
           dungeonRoomIdx={currentRoomIdx}
           onDungeonBattleEnd={handleDungeonBattleEnd}
           onExitToWiki={onExitToWiki}
+          activeDamageSkin={activeDamageSkin}
           devCheatsEnabled={devCheatsEnabled}
           screenShakeEnabled={screenShakeEnabled}
           combatSpeed={combatSpeed}

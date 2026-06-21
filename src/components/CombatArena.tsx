@@ -63,6 +63,7 @@ interface CombatArenaProps {
   isHardMode?: boolean;
   onStoryBattleEnd?: (victory: boolean, stats: { stars: number; hp: Record<string, number>; ult: Record<string, number>; duration: number; deaths: number }) => void;
   saveState?: any;
+  activeDamageSkin?: string;
 }
 
 // Particle class for beautiful graphics
@@ -253,7 +254,8 @@ export default function CombatArena({
   storyStageId = '',
   isHardMode = false,
   onStoryBattleEnd,
-  saveState
+  saveState,
+  activeDamageSkin = 'Default'
 }: CombatArenaProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const minimapCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -387,6 +389,36 @@ export default function CombatArena({
   const characterDeathsRef = useRef<number>(0);
   const battleStartTimeRef = useRef<number | null>(null);
 
+  const formatWithDamageSkin = (textStr: string, skin: string) => {
+    const hasNumber = /\d+/.test(textStr);
+    if (!hasNumber) return textStr;
+    if (
+      textStr.includes('COOLDOWN') || 
+      textStr.includes('ENERGY') || 
+      textStr.includes('Wit') || 
+      textStr.includes('DROPPED') || 
+      textStr.includes('WAVE') || 
+      textStr.includes('RESET') || 
+      textStr.includes('Shield') || 
+      textStr.includes('DODGE') || 
+      textStr.includes('TIME')
+    ) {
+      return textStr;
+    }
+    const replaceNumber = (numStr: string) => {
+      switch (skin) {
+        case 'Flame': return `🔥${numStr}🔥`;
+        case 'Electro': return `⚡${numStr}⚡`;
+        case 'Ice': return `❄${numStr}❄`;
+        case 'Void': return `◈${numStr}◈`;
+        case 'Dragon': return `🐉${numStr}🐉`;
+        case 'Celestial': return `✦✦${numStr}✦✦`;
+        default: return numStr;
+      }
+    };
+    return textStr.replace(/\d+/, replaceNumber);
+  };
+
   const spawnFloatingDamageText = (x: number, y: number, text: string, color: string, size: number = 14, isCrit: boolean = false, isWorldSpace: boolean = true) => {
     const id = Math.random().toString(36).substring(2, 9);
     
@@ -401,9 +433,11 @@ export default function CombatArena({
       renderY = y - camY;
     }
 
+    const formattedText = formatWithDamageSkin(text, activeDamageSkin);
+
     setDomDamageTexts(prev => [
       ...prev,
-      { id, x: renderX, y: renderY, text, color, size, isCrit }
+      { id, x: renderX, y: renderY, text: formattedText, color, size, isCrit }
     ]);
     setTimeout(() => {
       setDomDamageTexts(prev => prev.filter(t => t.id !== id));

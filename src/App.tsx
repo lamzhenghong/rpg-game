@@ -9,6 +9,7 @@ import GachaSimulator from './components/GachaSimulator';
 import CombatArena from './components/CombatArena';
 import InventoryManager from './components/InventoryManager';
 import RogueDungeon from './components/RogueDungeon';
+import GemsShop, { DAMAGE_SKINS } from './components/GemsShop';
 import { SaveState, Weapon, Artifact, InventoryItem, Quest, ElementType, ArtifactSlot } from './types';
 import { t, LanguageType } from './utils/i18n';
 import { PLAYABLE_CHARACTERS } from './data/characters';
@@ -70,6 +71,10 @@ const INITIAL_SAVE_STATE: SaveState = {
   activeQuests: INITIAL_50_QUESTS,
   completedQuestIds: [],
   loginRewardClaimedDays: [],
+  unlockedDamageSkins: ['Default'],
+  activeDamageSkin: 'Default',
+  lastShopRefreshHour: 0,
+  purchasedShopItemIds: [],
   gachaPity5Star: 0,
   gachaPity4Star: 0,
   bannerPity5Star: {
@@ -612,6 +617,20 @@ export default function App() {
           merged.loginRewardClaimedDays = [];
         }
 
+        // Initialize damage skin variables
+        if (!merged.unlockedDamageSkins) {
+          merged.unlockedDamageSkins = ['Default'];
+        }
+        if (!merged.activeDamageSkin) {
+          merged.activeDamageSkin = 'Default';
+        }
+        if (merged.lastShopRefreshHour === undefined) {
+          merged.lastShopRefreshHour = 0;
+        }
+        if (!merged.purchasedShopItemIds) {
+          merged.purchasedShopItemIds = [];
+        }
+
         // Initialize play time refs from the loaded save
         basePlayTimeRef.current = merged.stats?.playTime || 0;
         sessionStartRef.current = Date.now();
@@ -628,6 +647,42 @@ export default function App() {
       console.warn("Could not load save state on local drive, initializing default.", e);
     }
   }, []);
+
+  // Check and refresh shop hourly
+  useEffect(() => {
+    const checkRefresh = () => {
+      const currentHour = Math.floor(Date.now() / (1000 * 60 * 60));
+      if (saveState.lastShopRefreshHour !== undefined && saveState.lastShopRefreshHour !== currentHour) {
+        setSaveState(prev => {
+          if (prev.lastShopRefreshHour === currentHour) return prev;
+          const updated = {
+            ...prev,
+            lastShopRefreshHour: currentHour,
+            purchasedShopItemIds: []
+          };
+          try {
+            localStorage.setItem('aetheria_rpg_save_v3', JSON.stringify(updated));
+          } catch (err) {
+            console.error("Local save persistence error", err);
+          }
+          return updated;
+        });
+      }
+    };
+
+    checkRefresh();
+    const interval = setInterval(checkRefresh, 1000);
+    return () => clearInterval(interval);
+  }, [saveState.lastShopRefreshHour]);
+
+  const handleUpdateSaveState = (updater: React.SetStateAction<SaveState>) => {
+    triggerSaveUpdate(prev => {
+      if (typeof updater === 'function') {
+        return (updater as (p: SaveState) => SaveState)(prev);
+      }
+      return updater;
+    });
+  };
 
   // Update save states dynamically
   const triggerSaveUpdate = (updater: (prev: SaveState) => SaveState) => {
@@ -2380,11 +2435,45 @@ export default function App() {
               <span className="hidden md:inline">{t('party_setup', language)}</span>
               <span className="md:hidden">Party</span>
             </button>
+
+            <button
+              onClick={() => {
+                setActiveScreen('shop');
+                AetheriaAudioEngine.playClick();
+              }}
+              className={`p-2 px-1.5 text-[10.5px] md:text-xs md:p-2.5 md:px-5 font-black rounded-lg uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 shrink-0 md:flex-initial cursor-pointer ${
+                activeScreen === 'shop'
+                  ? 'bg-amber-400 text-slate-955 shadow-[0_0_15px_rgba(251,191,36,0.35)] font-black'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 font-black'
+              }`}
+              id="dash_screen_shop"
+            >
+              <Coins className="w-3.5 h-3.5 shrink-0 text-slate-955 text-slate-950" />
+              <span className="hidden md:inline">Gems Shop</span>
+              <span className="md:hidden">Shop</span>
+            </button>
           </div>
 
           {/* Actual screens swap frame */}
           <div className="flex-1 justify-between flex flex-col">
             <AnimatePresence mode="wait">
+              {activeScreen === 'shop' && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  transition={{ duration: 0.15 }}
+                  key="shop_scr"
+                  className="w-full"
+                >
+                  <GemsShop 
+                    saveState={saveState}
+                    onUpdateSaveState={handleUpdateSaveState}
+                    onShowAlert={showInGameAlert}
+                  />
+                </motion.div>
+              )}
+
               {activeScreen === 'wiki' && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.98 }}
@@ -2457,6 +2546,7 @@ export default function App() {
                     inventoryArtifacts={saveState.inventoryArtifacts || []}
                     characterEquippedArtifacts={saveState.characterEquippedArtifacts || {}}
                     onAwardArtifact={handleAwardArtifact}
+                    activeDamageSkin={saveState.activeDamageSkin || 'Default'}
                   />
                 </motion.div>
               )}
@@ -2487,6 +2577,7 @@ export default function App() {
                     combatSpeed={combatSpeed}
                     fpsLimit={fpsLimit}
                     language={language}
+                    activeDamageSkin={saveState.activeDamageSkin || 'Default'}
                   />
                 </motion.div>
               )}
@@ -2878,6 +2969,89 @@ export default function App() {
                         >
                           🧪 View Elemental Reaction Cheat Sheet
                         </button>
+                      </div>
+
+                      {/* Active Damage Skin Selector */}
+                      <div className="border-t border-white/5 pt-4">
+                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block font-mono mb-2.5 flex items-center gap-1.5 select-none">
+                          <span className="w-1.5 h-1.5 rounded-full bg-violet-500 animate-pulse"></span>
+                          Equipped Damage Skin
+                        </span>
+                        
+                        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2">
+                          {/* Default Skin */}
+                          <button
+                            onClick={() => {
+                              AetheriaAudioEngine.playClick();
+                              triggerSaveUpdate(prev => ({ ...prev, activeDamageSkin: 'Default' }));
+                            }}
+                            className={`p-2 rounded-lg border text-center font-mono flex flex-col items-center justify-between transition-all select-none ${
+                              (saveState.activeDamageSkin || 'Default') === 'Default'
+                                ? 'border-amber-400 bg-amber-400/10 shadow-[0_0_12px_rgba(251,191,36,0.25)]'
+                                : 'border-white/10 bg-black/40 hover:bg-black/60 cursor-pointer'
+                            }`}
+                          >
+                            <span className="text-[8px] font-bold uppercase tracking-tight text-slate-500">
+                              Default
+                            </span>
+                            <span className="text-xs font-black text-white my-1 drop-shadow">
+                              1000
+                            </span>
+                            <span className="text-[7px] font-black uppercase tracking-widest text-slate-400">
+                              {(saveState.activeDamageSkin || 'Default') === 'Default' ? 'Equipped' : 'Equip'}
+                            </span>
+                          </button>
+
+                          {DAMAGE_SKINS.map(skin => {
+                            const isUnlocked = (saveState.unlockedDamageSkins || ['Default']).includes(skin.id);
+                            const isActive = (saveState.activeDamageSkin || 'Default') === skin.id;
+                            
+                            let rarityColor = 'text-slate-400';
+                            let borderGlow = 'border-white/5 bg-black/20';
+                            if (skin.rarity === 'Legendary') {
+                              rarityColor = 'text-amber-400';
+                            } else if (skin.rarity === 'Rare') {
+                              rarityColor = 'text-purple-400';
+                            } else if (skin.rarity === 'Common') {
+                              rarityColor = 'text-blue-400';
+                            }
+
+                            if (isActive) {
+                              borderGlow = 'border-amber-400 bg-amber-400/10 shadow-[0_0_12px_rgba(251,191,36,0.25)]';
+                            } else if (isUnlocked) {
+                              borderGlow = 'border-white/10 bg-black/40 hover:bg-black/60 cursor-pointer';
+                            } else {
+                              borderGlow = 'border-white/5 bg-black/10 opacity-40';
+                            }
+
+                            return (
+                              <button
+                                key={skin.id}
+                                disabled={!isUnlocked}
+                                onClick={() => {
+                                  if (isUnlocked) {
+                                    AetheriaAudioEngine.playClick();
+                                    triggerSaveUpdate(prev => ({
+                                      ...prev,
+                                      activeDamageSkin: skin.id
+                                    }));
+                                  }
+                                }}
+                                className={`p-2 rounded-lg border text-center font-mono flex flex-col items-center justify-between transition-all select-none ${borderGlow}`}
+                              >
+                                <span className="text-[8px] font-bold uppercase tracking-tight text-slate-500">
+                                  {skin.name}
+                                </span>
+                                <span className="text-xs font-black text-white my-1 drop-shadow">
+                                  {skin.display}
+                                </span>
+                                <span className={`text-[7px] font-black uppercase tracking-widest ${rarityColor}`}>
+                                  {isUnlocked ? (isActive ? 'Equipped' : 'Equip') : 'Locked'}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
 
@@ -3502,6 +3676,7 @@ export default function App() {
             inventoryArtifacts={saveState.inventoryArtifacts || []}
             characterEquippedArtifacts={saveState.characterEquippedArtifacts || {}}
             onAwardArtifact={handleAwardArtifact}
+            activeDamageSkin={saveState.activeDamageSkin || 'Default'}
           />
         </motion.div>
       )}

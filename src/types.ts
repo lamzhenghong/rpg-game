@@ -167,6 +167,10 @@ export interface SaveState {
   bannerPity4Star?: Record<string, number>; // bannerId -> pity
   bannerGuaranteed5Star?: Record<string, boolean>; // bannerId -> guaranteed next is featured
   storyProgress?: StoryProgress;
+  unlockedDamageSkins?: string[];
+  activeDamageSkin?: string;
+  lastShopRefreshHour?: number;
+  purchasedShopItemIds?: string[];
   stats: {
     totalPulls: number;
     totalEnemiesDefeated: number;
