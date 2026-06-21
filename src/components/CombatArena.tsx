@@ -492,7 +492,8 @@ export default function CombatArena({
     fpsLimit,
     dungeonBuffs,
     dungeonMode,
-    isUltCutsceneActive: false
+    isUltCutsceneActive: false,
+    activeResonances: [] as { name: string; desc: string; key: string }[]
   });
 
   // Screenshake ref
@@ -517,9 +518,10 @@ export default function CombatArena({
       fpsLimit,
       dungeonBuffs,
       dungeonMode,
-      isUltCutsceneActive
+      isUltCutsceneActive,
+      activeResonances
     };
-  }, [combatParty, activePartyIndex, isParrying, isDashing, shieldActive, shieldWeight, dimensions, timeDisordered, activeChar, isPaused, isGameOver, battleStarted, countdownValue, fpsLimit, dungeonBuffs, dungeonMode, isUltCutsceneActive]);
+  }, [combatParty, activePartyIndex, isParrying, isDashing, shieldActive, shieldWeight, dimensions, timeDisordered, activeChar, isPaused, isGameOver, battleStarted, countdownValue, fpsLimit, dungeonBuffs, dungeonMode, isUltCutsceneActive, activeResonances]);
 
   // Start music loop once battle starts
   useEffect(() => {
@@ -1131,8 +1133,8 @@ export default function CombatArena({
     // Reset skill cooldowns
     setCombatParty(pList => pList.map((c, i) => {
       if (i === currentPartyIndex) {
-        const has2Electro = activeResonances.some(r => r.key === 'electro');
-        const has2Anemo = activeResonances.some(r => r.key === 'anemo');
+        const has2Electro = loopStateRef.current.activeResonances.some(r => r.key === 'electro');
+        const has2Anemo = loopStateRef.current.activeResonances.some(r => r.key === 'anemo');
         const hasSearingBlade = c.equippedWeaponName?.includes('Solar Searing Blade');
 
         let cdMultiplier = 1.0;
@@ -1142,7 +1144,7 @@ export default function CombatArena({
 
         const skillCdMax = 10.0 * cdMultiplier;
 
-        const has2Hydro = activeResonances.some(r => r.key === 'hydro');
+        const has2Hydro = loopStateRef.current.activeResonances.some(r => r.key === 'hydro');
         const resonanceEnergyMult = has2Hydro ? 1.20 : 1.0;
         const energyMultiplier = (loopStateRef.current.dungeonMode && loopStateRef.current.dungeonBuffs.includes('Recharge Matrix') ? 1.5 : 1.0) * resonanceEnergyMult;
 
@@ -1271,7 +1273,7 @@ export default function CombatArena({
 
       if (dist < basicAttackRange + enemy.radius) {
         // Cryo resonance: +15% Crit Rate against Frozen/Cryo targets
-        const has2Cryo = activeResonances.some(r => r.key === 'cryo');
+        const has2Cryo = loopStateRef.current.activeResonances.some(r => r.key === 'cryo');
         let charCritRate = currentActiveChar.critRate;
         if (has2Cryo && (enemy.activeElements.includes('Cryo') || enemy.isFrozen > 0)) {
           charCritRate += 0.15;
@@ -1358,7 +1360,7 @@ export default function CombatArena({
     // Award energy build on every basic attack swing! Fills the gauge nicely
     setCombatParty(pList => pList.map((c, i) => {
       if (i === currentPartyIndex) {
-        const has2Hydro = activeResonances.some(r => r.key === 'hydro');
+        const has2Hydro = loopStateRef.current.activeResonances.some(r => r.key === 'hydro');
         const resonanceEnergyMult = has2Hydro ? 1.20 : 1.0;
         const energyMultiplier = (loopStateRef.current.dungeonMode && loopStateRef.current.dungeonBuffs.includes('Recharge Matrix') ? 1.5 : 1.0) * resonanceEnergyMult;
         const energyGain = (hitSomething ? 2 : 1) * energyMultiplier; // bonus reward for hitting targets
@@ -1396,13 +1398,13 @@ export default function CombatArena({
     }
 
     // Apply 4 Unique element resonance (+15% DMG)
-    const has4Unique = activeResonances.some(r => r.key === 'unique');
+    const has4Unique = loopStateRef.current.activeResonances.some(r => r.key === 'unique');
     if (has4Unique) {
       finalDmg *= 1.15;
     }
 
     // Apply 2 Geo resonance (+15% DMG when protected by a shield)
-    const has2Geo = activeResonances.some(r => r.key === 'geo');
+    const has2Geo = loopStateRef.current.activeResonances.some(r => r.key === 'geo');
     if (has2Geo && currentShieldWeight > 0) {
       finalDmg *= 1.15;
     }
@@ -2090,7 +2092,7 @@ export default function CombatArena({
 
       if (isMoving) {
         const mag = Math.hypot(dx, dy);
-        const has2Anemo = activeResonances.some(r => r.key === 'anemo');
+        const has2Anemo = loopStateRef.current.activeResonances.some(r => r.key === 'anemo');
         const resonanceSpeedMultiplier = has2Anemo ? 1.15 : 1.0;
         let finalPlayerSpeed = currentIsDashing ? 8.2 : runningSpeed;
         
@@ -2343,7 +2345,7 @@ export default function CombatArena({
           setShieldActive(shard.element);
           
           // Apply Bulwark Guard rogue-like buff (+40% shield strength) & Geo element resonance (+15%)
-          const has2Geo = activeResonances.some(r => r.key === 'geo');
+          const has2Geo = loopStateRef.current.activeResonances.some(r => r.key === 'geo');
           const geoMult = has2Geo ? 1.15 : 1.0;
           const baseShield = Math.round((loopStateRef.current.dungeonMode && loopStateRef.current.dungeonBuffs.includes('Bulwark Guard') ? 840 : 600) * geoMult);
           setShieldWeight(baseShield); // Shield HP buffer
