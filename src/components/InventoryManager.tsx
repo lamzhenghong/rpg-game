@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { PLAYABLE_CHARACTERS } from '../data/characters';
 import { PlayableCharacter, Weapon, InventoryItem, ElementType, Quest, Artifact, ArtifactSlot, ArtifactSet } from '../types';
 import { Shield, Sparkles, Coins, Hammer, Star, StarOff, ArrowUpCircle, BookOpen, Smile, User, Flame, Droplet, Snowflake, Zap, Wind, Leaf, Search, HelpCircle, CheckCircle2, Circle, Layers, Lock, Unlock, Trash2 } from 'lucide-react';
@@ -123,6 +123,23 @@ export default function InventoryManager({
 }: InventoryManagerProps) {
   const [selectedCharId, setSelectedCharId] = useState<string>(ownedCharacterIds[0] || 'aurelia');
   const [activeTab, setActiveTab] = useState<'weapons' | 'items' | 'characters' | 'artifacts'>('characters');
+
+  const tabContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const container = tabContainerRef.current;
+    if (!container) return;
+
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      container.scrollLeft += e.deltaY;
+    };
+
+    container.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      container.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
   const [rarityFilter, setRarityFilter] = useState<'all' | 5 | 4 | 3>('all');
   const [elementFilter, setElementFilter] = useState<'all' | ElementType>('all');
   
@@ -429,9 +446,7 @@ export default function InventoryManager({
         <div className="bg-[#060811]/45 border border-white/10 rounded-xl p-5 space-y-5 flex flex-col justify-between">
           <div className="space-y-5">
             <div 
-              onWheel={(e) => {
-                e.currentTarget.scrollLeft += e.deltaY;
-              }}
+              ref={tabContainerRef}
               className="w-full flex overflow-x-auto scrollbar-none whitespace-nowrap gap-1 bg-black/45 p-1 rounded-lg border border-white/10"
             >
               <button
