@@ -357,11 +357,23 @@ export default function CombatArena({
   // Dungeon Mode status
   const [dungeonVictory, setDungeonVictory] = useState<boolean>(false);
 
-  const spawnFloatingDamageText = (x: number, y: number, text: string, color: string, size: number = 14, isCrit: boolean = false) => {
+  const spawnFloatingDamageText = (x: number, y: number, text: string, color: string, size: number = 14, isCrit: boolean = false, isWorldSpace: boolean = true) => {
     const id = Math.random().toString(36).substring(2, 9);
+    
+    let renderX = x;
+    let renderY = y;
+    
+    if (isWorldSpace) {
+      const { dimensions: currentDimensions } = loopStateRef.current;
+      const camX = Math.max(0, Math.min(WORLD_WIDTH - currentDimensions.width, playerRef.current.x - currentDimensions.width / 2));
+      const camY = Math.max(0, Math.min(WORLD_HEIGHT - currentDimensions.height, playerRef.current.y - currentDimensions.height / 2));
+      renderX = x - camX;
+      renderY = y - camY;
+    }
+
     setDomDamageTexts(prev => [
       ...prev,
-      { id, x, y, text, color, size, isCrit }
+      { id, x: renderX, y: renderY, text, color, size, isCrit }
     ]);
     setTimeout(() => {
       setDomDamageTexts(prev => prev.filter(t => t.id !== id));
@@ -1410,7 +1422,7 @@ export default function CombatArena({
     }
 
     let reactionName = '';
-    let damageColor = '#ffffff';
+    let damageColor = getElementColorHex(type) || '#ffffff';
 
     // Apply weather Pyro damage multiplier (+10% under Sunny weather)
     if (weatherRef.current === 'Sunny' && type === 'Pyro') {
@@ -1716,19 +1728,43 @@ export default function CombatArena({
       }
     }
 
+    // Differentiate basic attack (left click), E skill, and Ultimate
+    let dmgText = '';
+    let textFontSize = 14;
+    if (source === 'basic') {
+      dmgText = `${isCrit ? 'CRIT ' : ''}Click ${finalDmg}`;
+      textFontSize = isCrit ? 16 : 13;
+    } else if (source === 'skill') {
+      dmgText = `${isCrit ? 'CRIT ' : ''}Skill ${finalDmg}`;
+      textFontSize = isCrit ? 20 : 16;
+    } else if (source === 'ultimate') {
+      dmgText = `${isCrit ? 'CRIT ' : ''}ULT ${finalDmg}`;
+      textFontSize = isCrit ? 26 : 20;
+    } else {
+      dmgText = `${isCrit ? 'CRIT ' : ''}${finalDmg}`;
+      textFontSize = isCrit ? 19 : 14;
+    }
+
     // Floating damage integer (DOM Floaters)
     const finalTextColor = isCrit ? '#facc15' : damageColor;
     spawnTextRef.current(
       enemy.x + (Math.random() - 0.5) * 30,
       enemy.y - enemy.radius - 10,
-      `${isCrit ? 'CRIT ' : ''}${finalDmg}`,
+      dmgText,
       finalTextColor,
-      isCrit ? 19 : 14,
+      textFontSize,
       isCrit
     );
 
     if (reactionName) {
-      spawnTextRef.current(enemy.x, enemy.y - enemy.radius - 35, reactionName, damageColor, 12, false);
+      spawnTextRef.current(
+        enemy.x + (Math.random() - 0.5) * 20,
+        enemy.y - enemy.radius - 35,
+        reactionName,
+        damageColor,
+        13,
+        true
+      );
     }
 
     // Death hook checking
@@ -1766,7 +1802,7 @@ export default function CombatArena({
         if (dungeonMode) {
           setDungeonVictory(true);
           AetheriaAudioEngine.playWaveClear();
-          spawnTextRef.current(400, 200, '🏆 ROOM CLEANSED! 🏆', '#10b981', 20, true);
+          spawnTextRef.current(400, 200, '🏆 ROOM CLEANSED! 🏆', '#10b981', 20, true, false);
         } else {
           const rewardGems = 40 + currentWave * 15;
           const rewardMora = 500 + currentWave * 200;
@@ -1892,7 +1928,7 @@ export default function CombatArena({
           
           weatherRef.current = nextWeather;
           AetheriaAudioEngine.updateWeatherBgm(nextWeather);
-          spawnTextRef.current(400, 120, msg, color, 13, true);
+          spawnTextRef.current(400, 120, msg, color, 13, true, false);
           return nextWeather;
         });
       }
@@ -3214,7 +3250,7 @@ export default function CombatArena({
     })));
     
     // Quick indicator float
-    spawnFloatingDamageText(400, 200, 'WARFARE RESET • WAVE 1 PREPARED', '#10b981', 16, true);
+    spawnFloatingDamageText(400, 200, 'WARFARE RESET • WAVE 1 PREPARED', '#10b981', 16, true, false);
   };
 
   const bossHpPct = bossHp !== null ? bossHp / bossMaxHp : null;
