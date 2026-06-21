@@ -278,6 +278,7 @@ export const getStageSpec = (stageId: string): StoryStageSpec => {
 
 // Visual Novel Script Dialogues Database
 export const STORY_DIALOGUES: Record<string, { before?: StoryDialogueLine[], after?: StoryDialogueLine[] }> = {
+  // CHAPTER 1
   '1-1': {
     before: [
       { speaker: 'Eldric Thorne', element: 'Anemo', text: 'Hmm, the Whispering Forest feels unusually heavy today. The wind itself seems perturbed.' },
@@ -314,6 +315,293 @@ export const STORY_DIALOGUES: Record<string, { before?: StoryDialogueLine[], aft
     ]
   },
 
+  // CHAPTER 2: ELEMENTAL CRISIS
+  '2-1': {
+    before: [
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'The air is scorching here on the Burning Plains. Keep your elemental shields up!' },
+      { speaker: 'Marina', element: 'Hydro', text: 'The local water reserves are completely evaporated. Pyro slimes are condensing rapidly ahead!' },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'They are feeding on the tectonic core leaks. Let\'s cool down their spirits!' }
+    ],
+    after: [
+      { speaker: 'Marina', element: 'Hydro', text: 'That cooled things down, but the ambient heat is still rising.' },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'Yes, the tectonic core is leaking further north. We must press on through the temperature chasm.' }
+    ]
+  },
+  '2-3': {
+    before: [
+      { speaker: 'Marina', element: 'Hydro', text: 'Eldric! The clouds are pitch black, and the canyon is vibrating with high-voltage friction.' },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'Thunder Valley... a magnetic trap. Look, those Electro slimes are charging a corrupted automaton!' },
+      { speaker: 'Marina', element: 'Hydro', text: 'If we trigger Electro-charged reactions, we can short-circuit their magnetic field!' }
+    ],
+    after: [
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'The lightning strikes are subsiding. Excellent quick thinking, Marina.' },
+      { speaker: 'Marina', element: 'Hydro', text: 'The core energy signatures are converging. The elemental overlord chamber lies just ahead.' }
+    ]
+  },
+  '2-5': {
+    before: [
+      { speaker: 'Marina', element: 'Hydro', text: 'Brrr... it\'s freezing! The heat is literally being sucked out of the space!' },
+      { speaker: 'Glacial Frost Golem', element: 'Cryo', text: 'COLD... SHALL... CONSUME... ALL... LIFE...', effect: 'shake' },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'It\'s the Glacial Frost Golem! It\'s locking the entire valley in permanent stasis. We must shatter its icy shell!' }
+    ],
+    after: [
+      { speaker: 'Glacial Frost Golem', element: 'Cryo', text: 'Ice... cracks... the light... returns...', effect: 'flash' },
+      { speaker: 'Marina', element: 'Hydro', text: 'Look, it left behind the Absolute Zero Lens! The freezing aura is dissipating.' },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'This lens focuses cosmic light. It points towards the peaks of Ancient Aetheria. Let\'s climb!' }
+    ]
+  },
+
+  // CHAPTER 3: ANCIENT AETHERIA
+  '3-1': {
+    before: [
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'The Lost Sanctuary... It\'s beautiful. The architecture is carved out of pure white marble.' },
+      { speaker: 'Marina', element: 'Hydro', text: 'But the air smells of rotten ozone. Look at those Anemo slimes... they are acting like wild wind beasts!' },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'The Aether gates are leaking raw energy. We need to clear the platform first.' }
+    ],
+    after: [
+      { speaker: 'Marina', element: 'Hydro', text: 'The winds have settled. The white columns are glowing with soft starlight.' },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'But look at the path to the temple. It is heavily guarded by the old sentinels.' }
+    ]
+  },
+  '3-3': {
+    before: [
+      { speaker: 'Marina', element: 'Hydro', text: 'We have entered the inner corridors. The energy here is suffocating.' },
+      { speaker: 'Epoch Ruin Guard', element: 'Geo', text: 'GUARDIAN PROTOCOL ACTIVE. WEAPON SYSTEMS STABILIZED. ELIMINATE INVADERS.', effect: 'shake' },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'It\'s an ancient Ruin Guard sentinel. Keep active and parry its heavy attacks!' }
+    ],
+    after: [
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'The sentinel is down. But did you hear that screech from the high tower?' },
+      { speaker: 'Marina', element: 'Hydro', text: 'The Tempest Thunderbird... it\'s awakening at the summit altar!' }
+    ]
+  },
+  '3-5': {
+    before: [
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'The storm winds are tearing the temple roof apart!' },
+      { speaker: 'Tempest Thunderbird', element: 'Electro', text: 'SCREEECH! INTENSIFYING THUNDERSTORM MATRIX! FALL INTO DUST!', effect: 'shake' },
+      { speaker: 'Marina', element: 'Hydro', text: 'It\'s too fast! Eldric, we need to ground its lightning strikes using Geo and Cryo reactions!' },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'On my mark! Charge!' }
+    ],
+    after: [
+      { speaker: 'Tempest Thunderbird', element: 'Electro', text: 'Screee... the storm... clears...', effect: 'flash' },
+      { speaker: 'Marina', element: 'Hydro', text: 'The wind has completely died down. The starlight is shining on the altar.' },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'We have stabilized the gates of Aetheria. Let\'s retrieve the Stormborn Feather.' }
+    ]
+  },
+
+  // CHAPTER 4: WHISPERS OF THE ABYSS
+  '4-1': {
+    before: [
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'The Abyssal chasm... The shadows here are so thick, even my Anemo currents feel sluggish.' },
+      { speaker: 'Marina', element: 'Hydro', text: 'Be careful, Eldric. The dark matter is trying to absorb our elemental cores.' }
+    ],
+    after: [
+      { speaker: 'Marina', element: 'Hydro', text: 'The immediate shadow zone is purified.' },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'But the deeper outposts are still active. We must press on.' }
+    ]
+  },
+  '4-3': {
+    before: [
+      { speaker: 'Marina', element: 'Hydro', text: 'This looks like an ancient altar. The inscriptions... they talk about the stardust prophecy.' },
+      { speaker: 'Abyss Obsidian Berserker', element: 'Geo', text: 'YOU SHALL NOT DECODE THE SACRED SCRIPT. RETURN TO THE VOID!', effect: 'shake' },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'An elite sentinel of the void! Defend the altar!' }
+    ],
+    after: [
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'The sentinel has returned to dust. Let\'s translate the remaining lines.' },
+      { speaker: 'Marina', element: 'Hydro', text: '"When the stars fade, the Chronos Monarch shall reset the timeline..." It\'s a warning!' }
+    ]
+  },
+  '4-5': {
+    before: [
+      { speaker: 'Void Overlord', element: 'Geo', text: 'I AM THE OBSIDIAN WILL OF THE ABYSS. CONSUME THEIR LIGHT!', effect: 'shake' },
+      { speaker: 'Marina', element: 'Hydro', text: 'It\'s pulling us into a gravity well! We must burst it down before we lose all light!' }
+    ],
+    after: [
+      { speaker: 'Void Overlord', element: 'Geo', text: 'My shadow... returns... to the core...', effect: 'flash' },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'The chasm is collapsing, but look! A ladder of pure light has appeared.' }
+    ]
+  },
+
+  // CHAPTER 5: ECHOES OF ETERNITY
+  '5-1': {
+    before: [
+      { speaker: 'Marina', element: 'Hydro', text: 'Wow, we are walking on a bridge made of pure stardust!' },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'The Starlight Gate. The laws of physics are different here. We are in a dimension outside time.' }
+    ],
+    after: [
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'The star bridge has locked behind us. No going back.' }
+    ]
+  },
+  '5-3': {
+    before: [
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'This chamber... it\'s projecting spectral images of ancient heroes.' },
+      { speaker: 'Aetheria Oracle', element: 'Anemo', text: 'Brave travelers. Prove your resolve against the echoes of eternity.', effect: 'shake' }
+    ],
+    after: [
+      { speaker: 'Marina', element: 'Hydro', text: 'The spectral echoes have faded. They were testing our synergy.' }
+    ]
+  },
+  '5-5': {
+    before: [
+      { speaker: 'Eternity Knight', element: 'Geo', text: 'I AM THE GUARD OF THE SACRED STARDUST CORE. PREPARE YOUR TRIAL!', effect: 'shake' },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'Its defense shield is reinforced with stardust! Marina, overload its barriers with continuous swirled reactions!' }
+    ],
+    after: [
+      { speaker: 'Eternity Knight', element: 'Geo', text: 'Your resolve... is... eternal...', effect: 'flash' },
+      { speaker: 'Marina', element: 'Hydro', text: 'The stardust core has opened a portal of volcanic heat!' }
+    ]
+  },
+
+  // CHAPTER 6: THE FROSTFIRE CHASM
+  '6-1': {
+    before: [
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'Look at this geological anomaly. Magma streams are running side-by-side with glacial riverbeds.' },
+      { speaker: 'Marina', element: 'Hydro', text: 'The steam pressure is rising rapidly. My Hydro sensors are going wild!' }
+    ],
+    after: [
+      { speaker: 'Marina', element: 'Hydro', text: 'We cooled the sulfur pockets. The steam pressure is falling.' }
+    ]
+  },
+  '6-3': {
+    before: [
+      { speaker: 'Marina', element: 'Hydro', text: 'The steam pressure valves are completely locked by molten rock and ice.' },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'An elite sentinel is protecting the valve controls. Clear it out!' }
+    ],
+    after: [
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'Valves released. The chasm temperature is stabilizing temporarily.' }
+    ]
+  },
+  '6-5': {
+    before: [
+      { speaker: 'Frostfire Wyrm', element: 'Pyro', text: 'ROOOOOOOAR! METALLIC FLAME AND ICE SHATTER ALL WHO INTRUDE!', effect: 'shake' },
+      { speaker: 'Marina', element: 'Hydro', text: 'A dragon of absolute frost and lava! It\'s shifting elements every few seconds! Watch the color of its core!' }
+    ],
+    after: [
+      { speaker: 'Frostfire Wyrm', element: 'Pyro', text: 'Frost... melts... fire... burns... out...', effect: 'flash' },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'The dragon has disintegrated. Let\'s extract the Frostfire Core and climb the mountain spires.' }
+    ]
+  },
+
+  // CHAPTER 7: SKYWARD ASCENT
+  '7-1': {
+    before: [
+      { speaker: 'Marina', element: 'Hydro', text: 'The altitude is dizzying. We are walking on suspension bridges made of wind threads!' },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'Stay calm, Marina. Trust the Anemo currents to support your weight.' }
+    ],
+    after: [
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'The bridge has stabilized. We have reached the floating cloud outpost.' }
+    ]
+  },
+  '7-3': {
+    before: [
+      { speaker: 'Marina', element: 'Hydro', text: 'The avian sentinels are blockading the sanctuary path. They are aggressive!' },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'They are protecting the Zephyr Pillar. Let\'s show them our respect through combat!' }
+    ],
+    after: [
+      { speaker: 'Marina', element: 'Hydro', text: 'The bird sentinels have dispersed. The pillar is activated.' }
+    ]
+  },
+  '7-5': {
+    before: [
+      { speaker: 'Skyward Garuda', element: 'Anemo', text: 'SCREEECH! HUMANS, THE SKY IS THE REALM OF THE ASCENDANT ONES!', effect: 'shake' },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'It\'s the lord of the skies! Ground its flight with heavy ice and rock elements!' }
+    ],
+    after: [
+      { speaker: 'Skyward Garuda', element: 'Anemo', text: 'The wind... belongs... to... all...', effect: 'flash' },
+      { speaker: 'Marina', element: 'Hydro', text: 'The storm has cleared. The sun is shining directly onto the volcanic crucible below.' }
+    ]
+  },
+
+  // CHAPTER 8: HEART OF THE VOLCANO
+  '8-1': {
+    before: [
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'We have entered Mount Eldruin. The floor is pure lava. Keep your distance!' },
+      { speaker: 'Marina', element: 'Hydro', text: 'The magma is boiling with intense pressure. Molten creatures are rising!' }
+    ],
+    after: [
+      { speaker: 'Marina', element: 'Hydro', text: 'The immediate lava field is cooled. We have a pathway forward.' }
+    ]
+  },
+  '8-3': {
+    before: [
+      { speaker: 'Marina', element: 'Hydro', text: 'Look at that massive anvil! This is the ancient Forge of Obsidian.' },
+      { speaker: 'Forge Warden', element: 'Pyro', text: 'THE FORGE IS BURNING. INTRUDERS SHALL BE RE-FORGED INTO ASH!', effect: 'shake' }
+    ],
+    after: [
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'The Forge Warden is deactivated. We have acquired the legendary Volcano Ore.' }
+    ]
+  },
+  '8-5': {
+    before: [
+      { speaker: 'Molten Overlord', element: 'Pyro', text: 'I AM THE TECTONIC FURY OF AETHERIA. DROWN IN THE MAGMA MATRIX!', effect: 'shake' },
+      { speaker: 'Marina', element: 'Hydro', text: 'It\'s drawing lava from the core! Eldric, swirl my hydro vaporize drops onto its hot shield!' }
+    ],
+    after: [
+      { speaker: 'Molten Overlord', element: 'Pyro', text: 'The fire... fades... to ash...', effect: 'flash' },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'The volcanic core is stabilized. But a temporal rift is tearing open in front of us!' }
+    ]
+  },
+
+  // CHAPTER 9: DIMENSIONAL RIFT
+  '9-1': {
+    before: [
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'Space itself is tearing apart! Look, that\'s a forest floating next to a volcanic rock!' },
+      { speaker: 'Marina', element: 'Hydro', text: 'Multiple dimensional matrixes are colliding. The slimes here are hyper-mutated!' }
+    ],
+    after: [
+      { speaker: 'Marina', element: 'Hydro', text: 'We stabilized this rift section. The dimensions are merging.' }
+    ]
+  },
+  '9-3': {
+    before: [
+      { speaker: 'Marina', element: 'Hydro', text: 'The clock gears are spinning backwards. Time is glitching!' },
+      { speaker: 'Glitch Sentinel', element: 'Electro', text: 'ERROR 404: PROTOCOL CORRUPTED. PURGE TIME STREAM.', effect: 'shake' }
+    ],
+    after: [
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'The glitch sentinel is gone. The time stream has normalized, pointing towards the final platform.' }
+    ]
+  },
+  '9-5': {
+    before: [
+      { speaker: 'Chronos Monarch', element: 'Electro', text: 'MORTALS. TIME IS MY CANVAS. YOU SHALL BE ERASED FROM EXISTENCE!', effect: 'shake' },
+      { speaker: 'Marina', element: 'Hydro', text: 'It\'s accelerating our decay! Eldric, we must end this before the dimensional rift collapses!' }
+    ],
+    after: [
+      { speaker: 'Chronos Monarch', element: 'Electro', text: 'Time... flows... forward... once... more...', effect: 'flash' },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'The dimensional rifts are closed. The central engine of Aetheria lies open.' }
+    ]
+  },
+
+  // CHAPTER 10: AETHERIA REFORGED
+  '10-1': {
+    before: [
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'The Reforged Bastion... The core of the element matrix.' },
+      { speaker: 'Marina', element: 'Hydro', text: 'The elements are perfectly balanced here. The final trials are about to begin.' }
+    ],
+    after: [
+      { speaker: 'Marina', element: 'Hydro', text: 'The initial guardian pillar has been activated.' }
+    ]
+  },
+  '10-3': {
+    before: [
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'This is the trial of the Ascendant Pillar. The guardians are ancient projections of the creators.' },
+      { speaker: 'Ascendant Guard', element: 'Geo', text: 'PROVE YOUR VALUE. STABILIZE THE ELEMENTAL SYSTEM OR BE REPLACED.', effect: 'shake' }
+    ],
+    after: [
+      { speaker: 'Marina', element: 'Hydro', text: 'We passed the trial! The creators have acknowledged our synergy.' }
+    ]
+  },
+  '10-5': {
+    before: [
+      { speaker: 'Eldric Core Prime', element: 'Anemo', text: 'I AM THE SYSTEM INTELLIGENCE OF AETHERIA. INITIATING FINAL STABILIZATION VERIFICATION TRIAL.', effect: 'shake' },
+      { speaker: 'Marina', element: 'Hydro', text: 'This is it, Eldric! The ultimate test of our elements! For the future of Aetheria!' }
+    ],
+    after: [
+      { speaker: 'Eldric Core Prime', element: 'Anemo', text: 'VERIFICATION PASS. THE ELEMENTAL CORE IS STABILIZED. SAVIORS OF AETHERIA.', effect: 'flash' },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: 'We did it. Aetheria is reforged. The elemental matrix is fully synchronized.' },
+      { speaker: 'Marina', element: 'Hydro', text: 'Yes... the stardust has finally found its home.' }
+    ]
+  },
+
   // Chapter completions visual novel dialogues
   'chapter-1-clear': {
     before: [
@@ -344,14 +632,106 @@ export const getStageDialogue = (stageId: string): { before?: StoryDialogueLine[
   const chapter = parseInt(chapStr);
   const stage = parseInt(stageStr);
 
-  return {
+  const chapterLoreContext: Record<number, { before: string[], after: string[], element: ElementType }> = {
+    4: {
+      before: [
+        `The shadows here in the Abyss are active. Watch your step.`,
+        `The dark energy is consuming the elemental particles. Let's purify this area!`
+      ],
+      after: [
+        `The abyssal shadow has dispersed.`,
+        `We are uncovering more secrets of the ancient kings.`
+      ],
+      element: 'Geo'
+    },
+    5: {
+      before: [
+        `The stars are aligning over the stardust sanctuary.`,
+        `I feel the presence of ancient reflections. Let's prove our strength!`
+      ],
+      after: [
+        `The reflection fades back into stardust.`,
+        `The temple gates are welcoming us deeper.`
+      ],
+      element: 'Anemo'
+    },
+    6: {
+      before: [
+        `The steam is blinding! Lava and ice are colliding in this chasm.`,
+        `Be careful of thermal shock reactions. Let's stabilize the temperature!`
+      ],
+      after: [
+        `The steam is clearing.`,
+        `The pressure valves of the chasm are returning to normal.`
+      ],
+      element: 'Pyro'
+    },
+    7: {
+      before: [
+        `We are climbing above the clouds. The wind is fierce!`,
+        `Avian guardians are nesting here. Let's fly past them!`
+      ],
+      after: [
+        `The skies are clear again.`,
+        `The pathway to the summit is open.`
+      ],
+      element: 'Anemo'
+    },
+    8: {
+      before: [
+        `The heat is unbearable near the core of Mount Eldruin.`,
+        `Molten creatures are rising from the magma. Keep them away!`
+      ],
+      after: [
+        `The lava flow is receding.`,
+        `We must reach the crucible before the volcanic eruption occurs.`
+      ],
+      element: 'Pyro'
+    },
+    9: {
+      before: [
+        `The fabric of space is tearing apart! Dimensions are colliding.`,
+        `We are seeing multiple elements combined. Watch out for rapid reactions!`
+      ],
+      after: [
+        `The rift has stabilized temporarily.`,
+        `Keep moving before the space-time loop resets.`
+      ],
+      element: 'Electro'
+    },
+    10: {
+      before: [
+        `This is the final trial of the core. The creators themselves are watching.`,
+        `Let's put everything we've learned to the test. For Aetheria!`
+      ],
+      after: [
+        `The core has been stabilized.`,
+        `The matrix is saved. Aetheria is reforged!`
+      ],
+      element: 'Hydro'
+    }
+  };
+
+  const context = chapterLoreContext[chapter] || {
     before: [
-      { speaker: 'Eldric Thorne', element: 'Anemo', text: `We have entered Stage ${stageId}: ${spec.name}. The recommended combat level is ${spec.recommendedLevel}.` },
-      { speaker: 'Marina', element: 'Hydro', text: `Let\'s deploy our best characters and defeat the elements guarding this spot!` }
+      `We've arrived at ${spec.name}. The energy signature here is strong.`,
+      `Let's secure this position.`
     ],
     after: [
-      { speaker: 'Marina', element: 'Hydro', text: `That was a success! The local energy fluctuations have stabilized.` },
-      { speaker: 'Eldric Thorne', element: 'Anemo', text: `Indeed. Let\'s proceed further on our path.` }
+      `Area cleared and stabilized.`,
+      `Let's move forward.`
+    ],
+    element: 'Anemo'
+  };
+
+  return {
+    before: [
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: context.before[0] },
+      { speaker: 'Marina', element: context.element, text: context.before[1] }
+    ],
+    after: [
+      { speaker: 'Marina', element: context.element, text: context.after[0] },
+      { speaker: 'Eldric Thorne', element: 'Anemo', text: context.after[1] }
     ]
   };
 };

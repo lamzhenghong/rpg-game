@@ -26,7 +26,7 @@ export default function StoryStage({ stageId, previousStars, onDeploy, onClose, 
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="bg-slate-900 border border-white/10 rounded-2xl p-6 max-w-md w-full shadow-[0_0_50px_rgba(99,102,241,0.2)] space-y-6 relative overflow-hidden"
+        className="bg-slate-900 border border-white/10 rounded-2xl p-4 md:p-6 max-w-md w-full shadow-[0_0_50px_rgba(99,102,241,0.2)] space-y-4 md:space-y-6 relative overflow-y-auto max-h-[90vh] md:max-h-none scrollbar-thin"
       >
         {/* Glow corner decorations */}
         <div className="absolute -top-12 -right-12 w-28 h-28 bg-indigo-600/20 rounded-full blur-2xl pointer-events-none" />

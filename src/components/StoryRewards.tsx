@@ -36,7 +36,7 @@ export default function StoryRewards({
       <motion.div
         initial={{ opacity: 0, scale: 0.9, y: 30 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="bg-slate-900 border-2 border-amber-500/40 rounded-2xl p-6 md:p-8 max-w-md w-full text-center space-y-6 shadow-[0_0_60px_rgba(251,191,36,0.15)] relative overflow-hidden"
+        className="bg-slate-900 border-2 border-amber-500/40 rounded-2xl p-4 md:p-6 max-w-md w-full text-center space-y-4 md:space-y-6 shadow-[0_0_60px_rgba(251,191,36,0.15)] relative overflow-y-auto max-h-[90vh] md:max-h-none scrollbar-thin"
       >
         {/* Glow Effects */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 bg-amber-400/10 rounded-full blur-3xl pointer-events-none" />
