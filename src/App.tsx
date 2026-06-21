@@ -21,7 +21,7 @@ import SquadronQuestLedger from './components/SquadronQuestLedger';
 import { 
   Shield, Sparkles, Coins, HelpCircle, History, RefreshCw, Star, 
   BookOpen, Compass, Sword, Landmark, Hammer, Trophy, DollarSign, 
-  Info, Skull, LayoutGrid, CheckCircle2, Circle, Volume2, VolumeX, X, Play, LogOut, Award, Maximize2, Minimize2, Users
+  Info, Skull, LayoutGrid, CheckCircle2, Circle, Volume2, VolumeX, X, Play, LogOut, Award, Maximize2, Minimize2, Users, Lock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AetheriaAudioEngine } from './utils/audio';
@@ -288,6 +288,8 @@ export default function App() {
   const [isTerminated, setIsTerminated] = useState(false);
   const [muteSfx, setMuteSfx] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  const isDungeonLocked = !devCheatsEnabled && (saveState.playerLevel || 1) < 5;
 
   // Fullscreen handler
   const toggleFullscreen = () => {
@@ -1753,22 +1755,48 @@ export default function App() {
               <span className="md:hidden">Arena</span>
             </button>
 
-            <button
-              onClick={() => {
-                setActiveScreen('dungeon');
-                AetheriaAudioEngine.playClick();
-              }}
-              className={`p-2 px-1 text-[10.5px] md:text-xs md:p-2.5 md:px-5 font-black rounded-lg uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 flex-1 md:flex-initial cursor-pointer ${
-                activeScreen === 'dungeon'
-                  ? 'bg-violet-600 text-slate-950 shadow-[0_0_15px_rgba(124,58,237,0.35)] font-black'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 font-black'
-              }`}
-              id="dash_screen_dungeon"
-            >
-              <Landmark className={`w-3.5 h-3.5 shrink-0 ${activeScreen === 'dungeon' ? 'text-slate-955' : 'text-violet-400 animate-pulse'}`} />
-              <span className="hidden md:inline">{t('rogue_ruins', language)}</span>
-              <span className="md:hidden">Rogue</span>
-            </button>
+            {isDungeonLocked ? (
+              <button
+                type="button"
+                onClick={() => {
+                  AetheriaAudioEngine.playClick();
+                  showInGameAlert(
+                    "Reach Player Level 5 to unlock Rogue Dungeon.",
+                    `Progress: Level ${saveState.playerLevel || 1} / 5`,
+                    "error"
+                  );
+                }}
+                className="relative p-2 px-1 text-[10.5px] md:text-xs md:p-2.5 md:px-5 font-black rounded-lg uppercase tracking-wider transition-all cursor-pointer bg-slate-900/30 border border-slate-800/80 text-slate-500 hover:bg-slate-900/40 hover:text-slate-450 flex flex-col md:flex-row items-center justify-center gap-1.5 flex-1 md:flex-initial"
+                title={`Unlocks at Player Level 5 (Current: Level ${saveState.playerLevel || 1}/5)`}
+              >
+                <div className="flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5 shrink-0 text-red-500/70" />
+                  <span className="hidden md:inline">{t('rogue_ruins', language)}</span>
+                  <span className="md:hidden">Rogue</span>
+                </div>
+                {/* Lock icon/overlay text */}
+                <span className="absolute -bottom-2 bg-slate-950/95 border border-red-500/20 text-red-400 text-[6px] font-mono px-1.5 py-0.5 rounded uppercase tracking-tighter whitespace-nowrap z-10 scale-90">
+                  Unlocks at Player Level 5
+                </span>
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setActiveScreen('dungeon');
+                  AetheriaAudioEngine.playClick();
+                }}
+                className={`p-2 px-1 text-[10.5px] md:text-xs md:p-2.5 md:px-5 font-black rounded-lg uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 flex-1 md:flex-initial cursor-pointer ${
+                  activeScreen === 'dungeon'
+                    ? 'bg-violet-600 text-slate-950 shadow-[0_0_15px_rgba(124,58,237,0.35)] font-black'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5 font-black'
+                }`}
+                id="dash_screen_dungeon"
+              >
+                <Landmark className={`w-3.5 h-3.5 shrink-0 ${activeScreen === 'dungeon' ? 'text-slate-955' : 'text-violet-400 animate-pulse'}`} />
+                <span className="hidden md:inline">{t('rogue_ruins', language)}</span>
+                <span className="md:hidden">Rogue</span>
+              </button>
+            )}
 
             <button
               onClick={() => {
@@ -2792,6 +2820,14 @@ export default function App() {
         isOpen={showReactionsModal}
         onClose={() => setShowReactionsModal(false)}
       />
+
+      {/* Developer Mode Active floating badge */}
+      {devCheatsEnabled && (
+        <div className="fixed bottom-4 right-4 z-50 bg-orange-500 text-slate-955 font-black font-mono text-[9px] uppercase tracking-wider px-3 py-1.5 rounded-lg border border-orange-300 shadow-[0_0_15px_rgba(249,115,22,0.6)] flex items-center gap-1.5 select-none animate-pulse">
+          <span>🛠️</span>
+          <span>Developer Mode Active</span>
+        </div>
+      )}
     </div>
   );
 }
