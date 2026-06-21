@@ -2200,14 +2200,14 @@ export default function App() {
               initial={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.8, ease: 'easeInOut' }}
-              className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/40 backdrop-blur-2xl animate-fade-in"
+              className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/40 backdrop-blur-2xl animate-fade-in"
             >
               <div className="flex flex-col items-center gap-4 text-center select-none font-mono">
                 <span className="w-12 h-12 rounded-full border-4 border-indigo-500/20 border-t-indigo-400 animate-spin mb-2" />
-                <h1 className="text-3xl md:text-5xl font-black uppercase tracking-[0.25em] text-white drop-shadow-[0_0_20px_rgba(129,140,248,0.6)] animate-pulse">
+                <h1 className="text-3xl md:text-5xl font-black uppercase tracking-[0.25em] pl-[0.25em] text-white drop-shadow-[0_0_20px_rgba(129,140,248,0.6)] animate-pulse">
                   LOADING...
                 </h1>
-                <p className="text-xs md:text-sm font-bold uppercase tracking-[0.3em] text-slate-400">
+                <p className="text-xs md:text-sm font-bold uppercase tracking-[0.3em] pl-[0.3em] text-slate-400">
                   PLEASE WAIT
                 </p>
               </div>
