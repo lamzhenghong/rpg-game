@@ -84,10 +84,11 @@ function FloatingDamageTextDOM({ t }: FloatingDamageTextDOMProps) {
   const particles = useMemo(() => {
     if (!t.skin || t.skin === 'Default') return [];
     const list: any[] = [];
-    const count = t.isCrit ? 6 : 4;
+    // Lower count to reduce DOM nodes and layout costs, especially on mobile
+    const count = t.isCrit ? 3 : 1;
     for (let i = 0; i < count; i++) {
       const angle = (Math.PI * 2 / count) * i + (Math.random() * 0.4 - 0.2);
-      const dist = Math.random() * 16 + 12;
+      const dist = Math.random() * 12 + 8;
       const x = Math.cos(angle) * dist;
       const y = Math.sin(angle) * dist;
       list.push({
@@ -206,25 +207,44 @@ function FloatingDamageTextDOM({ t }: FloatingDamageTextDOMProps) {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.5, y: t.y, x: t.x }}
-      animate={{ opacity: 1, scale: t.isCrit ? 1.6 : 1.1, y: t.y - 65 }}
-      exit={{ opacity: 0, scale: 0.8, y: t.y - 95 }}
-      transition={{ type: 'spring', stiffness: 220, damping: t.isCrit ? 10 : 16 }}
-      style={skinStyle}
-      className={`relative select-none pointer-events-none ${textClass}`}
+    <div
+      style={{
+        position: 'absolute',
+        left: `${t.x}px`,
+        top: `${t.y}px`,
+        pointerEvents: 'none',
+        zIndex: 50,
+      }}
     >
-      {t.skin === 'Dragon' && (
-        <div className="absolute inset-[-10px] bg-red-950/20 rounded-full blur-md -z-10 animate-pulse pointer-events-none" />
-      )}
-      {t.skin === 'Void' && (
-        <div className="absolute inset-[-6px] bg-purple-950/30 rounded-full blur-sm -z-10 animate-ping pointer-events-none" style={{ animationDuration: '2s' }} />
-      )}
-      
-      <span>{t.text}</span>
-      
-      {renderParticles()}
-    </motion.div>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.5, y: 0 }}
+        animate={{ opacity: 1, scale: t.isCrit ? 1.6 : 1.1, y: -65 }}
+        exit={{ opacity: 0, scale: 0.8, y: -95 }}
+        transition={{ type: 'spring', stiffness: 220, damping: t.isCrit ? 10 : 16 }}
+        style={{
+          pointerEvents: 'none',
+        }}
+      >
+        <div
+          style={{
+            ...skinStyle,
+            position: 'relative',
+          }}
+          className={`select-none pointer-events-none ${textClass}`}
+        >
+          {t.skin === 'Dragon' && (
+            <div className="absolute inset-[-10px] bg-red-950/20 rounded-full blur-md -z-10 animate-pulse pointer-events-none" />
+          )}
+          {t.skin === 'Void' && (
+            <div className="absolute inset-[-6px] bg-purple-950/30 rounded-full blur-sm -z-10 animate-ping pointer-events-none" style={{ animationDuration: '2s' }} />
+          )}
+          
+          <span>{t.text}</span>
+          
+          {renderParticles()}
+        </div>
+      </motion.div>
+    </div>
   );
 }
 
@@ -3322,8 +3342,9 @@ export default function CombatArena({
         p.draw(ctx);
       });
       particlesRef.current = particlesRef.current.filter(p => p.life < p.maxLife);
-      if (isMobile && particlesRef.current.length > 50) {
-        particlesRef.current = particlesRef.current.slice(-50);
+      const maxAllowedParticles = isMobile ? 40 : 100;
+      if (particlesRef.current.length > maxAllowedParticles) {
+        particlesRef.current = particlesRef.current.slice(-maxAllowedParticles);
       }
 
       textsRef.current.forEach((t) => {

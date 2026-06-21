@@ -223,8 +223,8 @@ canvas {
 }
 @keyframes shiver-ice {
   0%, 100% { transform: translate(-50%, -50%) scale(1); }
-  20%, 60% { transform: translate(-50%, -50%) translate(-1.5px, 1px) scale(1.02); }
-  40%, 80% { transform: translate(-50%, -50%) translate(1.5px, -1px) scale(0.98); }
+  25% { transform: translate(-50%, -50%) translate(-1px, 0.5px); }
+  75% { transform: translate(-50%, -50%) translate(1px, -0.5px); }
 }
 .shiver-text {
   animation: shiver-ice 0.16s infinite linear !important;
@@ -232,8 +232,8 @@ canvas {
 
 /* Void Skin Pulse and Distortion */
 @keyframes pulse-void {
-  0%, 100% { transform: translate(-50%, -50%) scale(1); filter: hue-rotate(0deg) skewX(0deg); }
-  50% { transform: translate(-50%, -50%) scale(1.08); filter: hue-rotate(15deg) skewX(-4deg); }
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50% { transform: translate(-50%, -50%) scale(1.06); }
 }
 .pulse-void-text {
   animation: pulse-void 0.65s infinite ease-in-out !important;
@@ -254,8 +254,8 @@ canvas {
 
 /* Dragon Aura and Roar */
 @keyframes smoke-dragon {
-  0% { transform: translate(-50%, -50%) scale(0.7) translateY(0); opacity: 0.8; filter: blur(1.5px); }
-  100% { transform: translate(-50%, -50%) scale(1.6) translateY(-35px); opacity: 0; filter: blur(4px); }
+  0% { transform: translate(-50%, -50%) scale(0.7) translateY(0); opacity: 0.8; }
+  100% { transform: translate(-50%, -50%) scale(1.4) translateY(-30px); opacity: 0; }
 }
 .particle-dragon {
   position: absolute;
