@@ -13,6 +13,7 @@ import { getAccumulatedPortraitBuffs } from '../utils/portraits';
 import ElementalReactionsModal from './ElementalReactionsModal';
 import { LanguageType, t } from '../utils/i18n';
 import { ARTIFACT_SETS, ARTIFACT_NAMES, getArtifactMainStat } from '../data/artifacts';
+import { createFusedArtifact, getArtifactFusionRule, getEligibleFusionArtifacts } from '../utils/artifactFusion';
 
 export function getUpgradedWeaponStats(weapon: Weapon) {
   const lvl = weapon.level || 1;
@@ -74,6 +75,7 @@ const getElementBadgeIcon = (element: ElementType) => {
 
 interface InventoryManagerProps {
   mora: number;
+  aetherGems?: number;
   inventoryWeapons: Weapon[];
   inventoryItems: InventoryItem[];
   inventoryArtifacts?: Artifact[];
@@ -86,6 +88,8 @@ interface InventoryManagerProps {
   onEquipArtifact?: (charId: string, slot: ArtifactSlot, artifactId: string | null) => void;
   onLockArtifact?: (artId: string, lockState: boolean) => void;
   onDeleteArtifact?: (artId: string) => void;
+  onAwardArtifacts?: (artifacts: Artifact[]) => void;
+  onFuseArtifacts?: (consumeArtifactIds: string[], upgradedArtifact: Artifact, costMora: number, costGems: number) => void;
   onModifyCurrencies: (gemsDiff: number, moraDiff: number) => void;
   onUpgradeWeapon?: (weaponUid: string) => void;
   onShowAlert: (msg: string, solution?: string, type?: 'success' | 'error' | 'info') => void;
@@ -99,6 +103,7 @@ interface InventoryManagerProps {
 
 export default function InventoryManager({
   mora,
+  aetherGems = 0,
   inventoryWeapons,
   inventoryItems,
   inventoryArtifacts = [],
@@ -111,6 +116,8 @@ export default function InventoryManager({
   onEquipArtifact,
   onLockArtifact,
   onDeleteArtifact,
+  onAwardArtifacts,
+  onFuseArtifacts,
   onModifyCurrencies,
   onUpgradeWeapon,
   onShowAlert,
@@ -391,6 +398,37 @@ export default function InventoryManager({
     AetheriaAudioEngine.playWaveClear();
   };
 
+  const createRandomLegendaryArtifacts = (count: number): Artifact[] => {
+    const slots: ArtifactSlot[] = ['helmet', 'hands', 'leg', 'shoe'];
+    const sets: ArtifactSet[] = ['Vanguard', 'Guardian', 'Celestial', 'Chrono'];
+    const stamp = Date.now();
+
+    return Array.from({ length: count }, (_, idx) => {
+      const set = sets[Math.floor(Math.random() * sets.length)];
+      const slot = slots[Math.floor(Math.random() * slots.length)];
+
+      return {
+        id: `art_dev_legendary_${stamp}_${idx}_${Math.floor(Math.random() * 100000)}`,
+        name: ARTIFACT_NAMES[set][slot],
+        slot,
+        set,
+        rarity: 5,
+        isLocked: false
+      };
+    });
+  };
+
+  const handleCheatLegendaryArtifacts = () => {
+    const artifacts = createRandomLegendaryArtifacts(10);
+    onAwardArtifacts?.(artifacts);
+    onShowAlert(
+      "Developer Cheat: Legendary Artifacts Loaded!",
+      "Added +10 random Gold / Legendary artifacts to the artifact ledger.",
+      "success"
+    );
+    AetheriaAudioEngine.playWaveClear();
+  };
+
   return (
     <div className="bg-[#0b0f19]/85 border border-white/10 rounded-xl overflow-hidden h-full flex flex-col min-h-[600px] shadow-[0_10px_40px_rgba(0,0,0,0.6)] backdrop-blur-md" id="inv_main_frame">
       {/* Header bar */}
@@ -499,6 +537,17 @@ export default function InventoryManager({
             {/* Artifact Filter Controls Row */}
             {activeTab === 'artifacts' && (
               <div className="space-y-3 bg-black/35 p-3 rounded-lg border border-white/5">
+                {devCheatsEnabled && (
+                  <button
+                    type="button"
+                    onClick={handleCheatLegendaryArtifacts}
+                    className="w-full bg-amber-400/15 hover:bg-amber-400/25 text-amber-300 border border-amber-400/30 text-[10px] font-black uppercase tracking-wider px-3 py-2 rounded-lg transition-all active:scale-95 cursor-pointer shadow-sm flex items-center justify-center gap-2"
+                  >
+                    <Sparkles className="w-3.5 h-3.5" />
+                    +10 Random Legendary Artifacts
+                  </button>
+                )}
+
                 {/* Search box */}
                 <div className="relative">
                   <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
@@ -891,7 +940,7 @@ export default function InventoryManager({
         <div className="lg:col-span-2 bg-[#060811]/60 border border-white/10 p-6 rounded-xl flex flex-col justify-between shadow-[0_0_25px_rgba(99,102,241,0.06)]">
           {activeTab === 'artifacts' ? (
             // ARTIFACT DETAIL AND MANAGEMENT CONTENT
-            <div className="space-y-6 flex-1 flex flex-col justify-between">
+            <div className="space-y-4 flex-1 flex flex-col">
               {(() => {
                 const activeArt = inventoryArtifacts.find(a => a.id === selectedArtifactId) || (inventoryArtifacts.length > 0 ? inventoryArtifacts[0] : null);
                 if (!activeArt) {
@@ -911,10 +960,31 @@ export default function InventoryManager({
                 const equippedCharName = activeArt.equippedTo 
                   ? PLAYABLE_CHARACTERS.find(c => c.id === activeArt.equippedTo)?.name || activeArt.equippedTo 
                   : null;
+                const fusionRule = getArtifactFusionRule(activeArt.rarity);
+                const eligibleFusionArtifacts = getEligibleFusionArtifacts(inventoryArtifacts, activeArt);
+                const fusionArtifacts = activeArt.isLocked || activeArt.equippedTo
+                  ? []
+                  : [
+                      activeArt,
+                      ...eligibleFusionArtifacts.filter(art => art.id !== activeArt.id)
+                    ].slice(0, 3);
+                const hasEnoughFusionCurrency = !!fusionRule && mora >= fusionRule.moraCost && aetherGems >= fusionRule.gemCost;
+                const canFuseArtifact = !!fusionRule && fusionArtifacts.length === 3 && hasEnoughFusionCurrency && !!onFuseArtifacts;
+                const fusionBlockReason = !fusionRule
+                  ? 'Gold artifacts are already at maximum tier.'
+                  : activeArt.isLocked
+                    ? 'Unlock this artifact before fusion.'
+                    : activeArt.equippedTo
+                      ? 'Unequip this artifact before fusion.'
+                      : fusionArtifacts.length < 3
+                        ? `Need 3 unlocked, unequipped copies of ${activeArt.name}.`
+                        : !hasEnoughFusionCurrency
+                          ? `Requires ${fusionRule.moraCost.toLocaleString()} Mora and ${fusionRule.gemCost.toLocaleString()} Gems.`
+                          : 'Ready to fuse this artifact part.';
 
                 return (
-                  <div className="space-y-6 flex-1 flex flex-col justify-between">
-                    <div className="space-y-6">
+                  <div className="space-y-4 flex-1 flex flex-col">
+                    <div className="space-y-4">
                       {/* Header: Artifact detail profile */}
                       <div className="flex items-center gap-5 border-b border-white/15 pb-4">
                         <div className={`w-16 h-16 rounded-xl flex items-center justify-center text-3xl font-black shadow-[0_0_20px_rgba(0,0,0,0.6)] ring-2 ring-white/10 ${
@@ -991,7 +1061,7 @@ export default function InventoryManager({
                     </div>
 
                     {/* Actions (Lock/Unlock and Delete/Salvage) */}
-                    <div className="flex flex-col md:flex-row gap-4 border-t border-white/10 pt-5">
+                    <div className="flex flex-col md:flex-row gap-4 border-t border-white/10 pt-4">
                       {/* Lock Button */}
                       <button
                         onClick={() => {
@@ -1035,6 +1105,82 @@ export default function InventoryManager({
                         <Trash2 className="w-4 h-4" />
                         <span>Salvage / Delete</span>
                       </button>
+                    </div>
+
+                    {/* Artifact Fusion */}
+                    <div className="bg-black/35 border border-amber-400/15 p-4 rounded-xl space-y-3">
+                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                        <div>
+                          <h4 className="text-xs font-black text-amber-300 uppercase tracking-widest flex items-center gap-1.5">
+                            <Sparkles className="w-4 h-4" />
+                            Artifact Fusion
+                          </h4>
+                          <p className="text-[10px] text-slate-450 font-mono uppercase mt-1">
+                            Same exact artifact name, set, slot, and tier only.
+                          </p>
+                        </div>
+                        {fusionRule && (
+                          <div className="text-[10px] font-black font-mono uppercase text-right">
+                            <span className="text-blue-300">{fusionRule.inputLabel}</span>
+                            <span className="text-slate-500 px-1.5">→</span>
+                            <span className={fusionRule.resultRarity === 5 ? 'text-amber-300' : 'text-purple-300'}>
+                              {fusionRule.outputLabel}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <div className="bg-white/5 border border-white/10 rounded-lg p-2">
+                          <span className="block text-[8px] text-slate-500 font-black uppercase tracking-wider">Matching Copies</span>
+                          <span className={`block text-sm font-black font-mono ${fusionArtifacts.length >= 3 ? 'text-emerald-300' : 'text-rose-300'}`}>
+                            {fusionArtifacts.length}/3
+                          </span>
+                        </div>
+                        <div className="bg-white/5 border border-white/10 rounded-lg p-2">
+                          <span className="block text-[8px] text-slate-500 font-black uppercase tracking-wider">Mora Cost</span>
+                          <span className={`block text-sm font-black font-mono ${fusionRule && mora >= fusionRule.moraCost ? 'text-amber-300' : 'text-rose-300'}`}>
+                            {fusionRule ? fusionRule.moraCost.toLocaleString() : 'MAX'}
+                          </span>
+                        </div>
+                        <div className="bg-white/5 border border-white/10 rounded-lg p-2">
+                          <span className="block text-[8px] text-slate-500 font-black uppercase tracking-wider">Gem Cost</span>
+                          <span className={`block text-sm font-black font-mono ${fusionRule && aetherGems >= fusionRule.gemCost ? 'text-sky-300' : 'text-rose-300'}`}>
+                            {fusionRule ? fusionRule.gemCost.toLocaleString() : 'MAX'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={!canFuseArtifact}
+                        onClick={() => {
+                          if (!fusionRule || !canFuseArtifact) {
+                            onShowAlert("Artifact Fusion Not Ready!", fusionBlockReason, "error");
+                            return;
+                          }
+                          const fusedArtifact = createFusedArtifact(activeArt);
+                          onFuseArtifacts?.(
+                            fusionArtifacts.map(art => art.id),
+                            fusedArtifact,
+                            fusionRule.moraCost,
+                            fusionRule.gemCost
+                          );
+                          setSelectedArtifactId(fusedArtifact.id);
+                        }}
+                        className={`w-full font-black text-xs uppercase tracking-widest px-6 py-3 rounded-lg flex items-center justify-center gap-2 transition-all active:scale-95 border ${
+                          canFuseArtifact
+                            ? 'bg-amber-400 hover:bg-amber-300 text-slate-950 border-amber-300/40 cursor-pointer shadow-[0_0_18px_rgba(251,191,36,0.22)]'
+                            : 'bg-slate-900/80 text-slate-500 border-white/5 cursor-not-allowed'
+                        }`}
+                      >
+                        <Sparkles className="w-4 h-4" />
+                        {fusionRule ? `Fuse to ${fusionRule.resultRarity === 5 ? 'Gold' : 'Purple'}` : 'Max Fusion Tier'}
+                      </button>
+
+                      <p className={`text-[9px] font-mono uppercase leading-relaxed ${canFuseArtifact ? 'text-emerald-300' : 'text-slate-500'}`}>
+                        {fusionBlockReason}
+                      </p>
                     </div>
                   </div>
                 );

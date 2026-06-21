@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AetheriaAudioEngine } from './utils/audio';
+import { getArtifactFusionRule, isSameArtifactPart } from './utils/artifactFusion';
 import mainMenuBg from '../assets/main_menu_bg.png';
 import gameLogoImg from '../assets/game_logo.png';
 import StoryMode from './components/StoryMode';
@@ -1210,6 +1211,83 @@ export default function App() {
       ...prev,
       inventoryArtifacts: [...(prev.inventoryArtifacts || []), newArt]
     }));
+  };
+
+  const handleAwardArtifacts = (newArtifacts: Artifact[]) => {
+    triggerSaveUpdate(prev => ({
+      ...prev,
+      inventoryArtifacts: [...(prev.inventoryArtifacts || []), ...newArtifacts]
+    }));
+  };
+
+  const handleFuseArtifacts = (consumeArtifactIds: string[], upgradedArtifact: Artifact, costMora: number, costGems: number) => {
+    triggerSaveUpdate(prev => {
+      const artifacts = prev.inventoryArtifacts || [];
+      const consumeIdSet = new Set(consumeArtifactIds);
+      const consumedArtifacts = artifacts.filter(art => consumeIdSet.has(art.id));
+      const baseArtifact = consumedArtifacts[0];
+      const fusionRule = baseArtifact ? getArtifactFusionRule(baseArtifact.rarity) : null;
+
+      if (!baseArtifact || consumedArtifacts.length !== 3 || !fusionRule) {
+        showInGameAlert(
+          "Artifact Fusion Failed!",
+          "Select three matching blue or purple artifacts from the same exact set piece before fusing.",
+          "error"
+        );
+        return prev;
+      }
+
+      const samePart = consumedArtifacts.every(art => isSameArtifactPart(art, baseArtifact));
+      const blockedArtifact = consumedArtifacts.some(art => art.isLocked || art.equippedTo);
+      if (!samePart || blockedArtifact) {
+        showInGameAlert(
+          "Artifact Fusion Blocked!",
+          "Only unlocked, unequipped artifacts with the exact same name, set, slot, and tier can be fused.",
+          "error"
+        );
+        return prev;
+      }
+
+      if (
+        upgradedArtifact.name !== baseArtifact.name ||
+        upgradedArtifact.set !== baseArtifact.set ||
+        upgradedArtifact.slot !== baseArtifact.slot ||
+        upgradedArtifact.rarity !== fusionRule.resultRarity
+      ) {
+        showInGameAlert(
+          "Artifact Fusion Matrix Mismatch!",
+          "The fused artifact must keep the same artifact part and upgrade only the rarity tier.",
+          "error"
+        );
+        return prev;
+      }
+
+      if (prev.mora < costMora || prev.aetherGems < costGems) {
+        showInGameAlert(
+          "Insufficient Fusion Currency!",
+          `This fusion requires ${costMora.toLocaleString()} Mora and ${costGems.toLocaleString()} Gems.`,
+          "error"
+        );
+        return prev;
+      }
+
+      showInGameAlert(
+        "Artifact Fusion Complete!",
+        `${fusionRule.inputLabel} ${baseArtifact.name} fused into ${fusionRule.outputLabel}.`,
+        "success"
+      );
+      AetheriaAudioEngine.playWaveClear();
+
+      return {
+        ...prev,
+        mora: prev.mora - costMora,
+        aetherGems: prev.aetherGems - costGems,
+        inventoryArtifacts: [
+          ...artifacts.filter(art => !consumeIdSet.has(art.id)),
+          upgradedArtifact
+        ]
+      };
+    });
   };
 
 
@@ -2885,6 +2963,7 @@ export default function App() {
                     characterEquippedWeapon={saveState.characterEquippedWeapon || {}}
                     characterPortraits={saveState.characterPortraits || {}}
                     mora={saveState.mora}
+                    aetherGems={saveState.aetherGems}
                     onEquipWeapon={(cid, wid) => handleEquipWeapon(cid, wid)}
                     onLevelUpCharacter={handleLevelUpCharacter}
                     onUpgradeWeapon={(wuid) => handleUpgradeWeapon(wuid)}
@@ -2898,6 +2977,8 @@ export default function App() {
                     onEquipArtifact={handleEquipArtifact}
                     onLockArtifact={handleLockArtifact}
                     onDeleteArtifact={handleDeleteArtifact}
+                    onAwardArtifacts={handleAwardArtifacts}
+                    onFuseArtifacts={handleFuseArtifacts}
                   />
                 </motion.div>
               )}
