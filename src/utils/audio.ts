@@ -378,6 +378,33 @@ class AudioEngine {
     oscSub.stop(this.ctx.currentTime + 0.8);
   }
 
+  public playSpecialUltimate() {
+    this.playUltimate();
+    if (!this.ctx || this.isMuted) return;
+
+    const playTone = (freq: number, delay: number) => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, this.ctx!.currentTime + delay);
+      osc.frequency.exponentialRampToValueAtTime(freq * 1.8, this.ctx!.currentTime + delay + 0.45);
+
+      gain.gain.setValueAtTime(0.001, this.ctx!.currentTime + delay);
+      gain.gain.linearRampToValueAtTime(0.22, this.ctx!.currentTime + delay + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx!.currentTime + delay + 0.5);
+
+      osc.connect(gain);
+      gain.connect(this.sfxGain!);
+      osc.start(this.ctx!.currentTime + delay);
+      osc.stop(this.ctx!.currentTime + delay + 0.52);
+    };
+
+    playTone(220, 0.08);
+    playTone(330, 0.18);
+    playTone(495, 0.28);
+  }
+
   public playWaveClear() {
     this.resume();
     if (!this.ctx || this.isMuted) return;

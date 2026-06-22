@@ -149,6 +149,7 @@ export interface SaveState {
   playerLevel?: number;
   playerExp?: number;
   playerExpMax?: number;
+  specialUltimateUnlockNotified?: boolean;
   inventoryWeapons: Weapon[];
   inventoryArtifacts?: Artifact[];
   inventoryItems: InventoryItem[];

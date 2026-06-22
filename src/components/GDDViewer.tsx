@@ -1354,6 +1354,18 @@ export default function GDDViewer({
                       <span className="text-slate-400">Q KEY / BURST:</span>
                       <span className="font-extrabold text-amber-400 bg-slate-800 px-2 py-0.5 rounded">Divinity Burst (100% CD)</span>
                     </div>
+                    <div className="bg-amber-400/10 p-3 rounded border border-amber-400/25 space-y-1">
+                      <div className="flex justify-between items-center gap-3">
+                        <span className="text-amber-200 font-extrabold uppercase tracking-wide">Special Ultimate:</span>
+                        <span className="font-extrabold text-slate-950 bg-amber-400 px-2 py-0.5 rounded">Unlocks at Player LV.40</span>
+                      </div>
+                      <p className="text-slate-300 leading-normal text-[10px]">
+                        Bring Aurelia + Kaelen for Eternal Vapor, or Maelis + Veyra for Worldstorm Genesis. Both partner Ultimate Gauges must be full, the active hero must be one of the pair, and the glowing Special Ultimate button appears beside Burst on desktop or center-bottom on mobile.
+                      </p>
+                      <p className="text-slate-500 leading-normal text-[10px]">
+                        Normal Burst still works separately. Using either partner's normal Burst spends that hero's gauge, so Special Ultimate hides until both gauges are full again. Special Ultimate has a shared 60 second cooldown.
+                      </p>
+                    </div>
                     <div className="flex justify-between items-center bg-black/35 p-2 rounded border border-white/5">
                       <span className="text-slate-400">KEYS 1, 2, 3, 4:</span>
                       <span className="font-extrabold text-slate-200 bg-slate-800 px-2 py-0.5 rounded">Instant Party Switch</span>

@@ -18,6 +18,11 @@ import { getAccumulatedPortraitBuffs } from '../utils/portraits';
 import { WEAPONS_DATABASE } from '../data/weapons';
 import { getArtifactMainStat, generateRandomArtifact } from '../data/artifacts';
 import { AetherEchoState, rollAetherEcho } from '../utils/aetherEcho';
+import {
+  SPECIAL_ULTIMATE_COOLDOWN_MS,
+  getAvailableSpecialUltimate,
+  type SpecialUltimateCombo
+} from '../utils/specialUltimates';
 import MobileJoystick from './MobileJoystick';
 import MobileControls from './MobileControls';
 import { getStageSpec } from '../data/storyStages';
@@ -46,6 +51,7 @@ interface CombatArenaProps {
   onAwardArtifact?: (artifact: Artifact) => void;
   characterPortraits?: Record<string, number>;
   devCheatsEnabled?: boolean;
+  playerLevel?: number;
   screenShakeEnabled?: boolean;
   combatSpeed?: number;
   fpsLimit?: '60' | 'none';
@@ -321,6 +327,7 @@ export default function CombatArena({
   onAwardArtifact,
   characterPortraits = {},
   devCheatsEnabled = true,
+  playerLevel = 1,
   screenShakeEnabled = true,
   combatSpeed = 1.0,
   fpsLimit = '60',
@@ -391,16 +398,52 @@ export default function CombatArena({
   const [battleStarted, setBattleStarted] = useState<boolean>(false);
   const [activeUltCutscene, setActiveUltCutscene] = useState<any | null>(null);
   const [isUltCutsceneActive, setIsUltCutsceneActive] = useState<boolean>(false);
+  const [specialUltimateCooldownReadyAt, setSpecialUltimateCooldownReadyAt] = useState<number>(0);
+  const [specialUltimateNow, setSpecialUltimateNow] = useState<number>(() => Date.now());
+  const [specialUltPresentation, setSpecialUltPresentation] = useState<{
+    combo: SpecialUltimateCombo;
+    phase: 'dialogue' | 'name' | 'impact';
+    dialogueIndex: number;
+  } | null>(null);
   const [countdownValue, setCountdownValue] = useState<number | null>(null);
   const [pendingAction, setPendingAction] = useState<'restart' | 'home' | 'wiki' | 'end_run' | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const specialUltimateCooldownReadyAtRef = useRef<number>(0);
+  const specialUltimateTimeoutsRef = useRef<NodeJS.Timeout[]>([]);
+
+  const availableSpecialUltimate = useMemo(() => getAvailableSpecialUltimate({
+    partyIds,
+    combatParty,
+    activeCharacterId: activeChar?.id,
+    playerLevel,
+    devCheatsEnabled,
+    cooldownReadyAt: specialUltimateCooldownReadyAt,
+    now: specialUltimateNow
+  }), [
+    partyIds,
+    combatParty,
+    activeChar?.id,
+    playerLevel,
+    devCheatsEnabled,
+    specialUltimateCooldownReadyAt,
+    specialUltimateNow
+  ]);
 
   // Clear countdown interval on unmount
   useEffect(() => {
     return () => {
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+      specialUltimateTimeoutsRef.current.forEach(timeoutId => clearTimeout(timeoutId));
     };
   }, []);
+
+  useEffect(() => {
+    specialUltimateCooldownReadyAtRef.current = specialUltimateCooldownReadyAt;
+    if (specialUltimateCooldownReadyAt <= Date.now()) return;
+
+    const intervalId = setInterval(() => setSpecialUltimateNow(Date.now()), 1000);
+    return () => clearInterval(intervalId);
+  }, [specialUltimateCooldownReadyAt]);
 
   const startCountdown = (onComplete: () => void) => {
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
@@ -656,6 +699,15 @@ export default function CombatArena({
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [isGameOver, setIsGameOver] = useState<boolean>(false);
   const [waveClearMessage, setWaveClearMessage] = useState<string | null>(null);
+  const showSpecialUltimateButton = Boolean(
+    availableSpecialUltimate &&
+    battleStarted &&
+    !isPaused &&
+    !isGameOver &&
+    countdownValue === null &&
+    !isUltCutsceneActive &&
+    !specialUltPresentation
+  );
 
   // Refs for keyboard controls to prevent scope-binding loss in standard fast loops
   const keyboardState = useRef<Record<string, boolean>>({});
@@ -1635,7 +1687,14 @@ export default function CombatArena({
     }));
   };
 
+  const clearSpecialUltimateTimeouts = () => {
+    specialUltimateTimeoutsRef.current.forEach(timeoutId => clearTimeout(timeoutId));
+    specialUltimateTimeoutsRef.current = [];
+  };
+
   const triggerUltimate = () => {
+    if (specialUltPresentation || loopStateRef.current.isUltCutsceneActive) return;
+
     const { combatParty: currentParty, activePartyIndex: currentPartyIndex } = loopStateRef.current;
     const currentActiveChar = currentParty[currentPartyIndex] || null;
     if (!currentActiveChar) return;
@@ -1717,6 +1776,103 @@ export default function CombatArena({
         });
       }
     }, 750);
+  };
+
+  const triggerSpecialUltimate = () => {
+    if (specialUltPresentation || loopStateRef.current.isUltCutsceneActive) return;
+
+    const now = Date.now();
+    const {
+      combatParty: currentParty,
+      activePartyIndex: currentPartyIndex,
+      isPaused: currentIsPaused,
+      isGameOver: currentIsGameOver,
+      countdownValue: currentCountdownValue
+    } = loopStateRef.current;
+    if (currentIsPaused || currentIsGameOver || currentCountdownValue !== null) return;
+
+    const currentActiveChar = currentParty[currentPartyIndex] || null;
+    const available = getAvailableSpecialUltimate({
+      partyIds,
+      combatParty: currentParty,
+      activeCharacterId: currentActiveChar?.id,
+      playerLevel,
+      devCheatsEnabled,
+      cooldownReadyAt: specialUltimateCooldownReadyAtRef.current,
+      now
+    });
+    if (!currentActiveChar || !available) {
+      AetheriaAudioEngine.playClick();
+      return;
+    }
+
+    const combo = available.combo;
+    const participantIds = new Set(combo.requiredCharacterIds);
+    const participants = currentParty.filter(c => participantIds.has(c.id));
+    const averageAtk = participants.reduce((sum, c) => sum + c.atk, 0) / Math.max(1, participants.length);
+    const specialDamage = averageAtk * combo.damageMultiplier;
+    const px = playerRef.current.x;
+    const py = playerRef.current.y;
+    const impactColor = combo.style === 'vapor' ? '#fb923c' : '#a855f7';
+    const secondaryColor = combo.style === 'vapor' ? '#22d3ee' : '#22c55e';
+
+    clearSpecialUltimateTimeouts();
+    setSpecialUltimateCooldownReadyAt(now + SPECIAL_ULTIMATE_COOLDOWN_MS);
+    specialUltimateCooldownReadyAtRef.current = now + SPECIAL_ULTIMATE_COOLDOWN_MS;
+    setSpecialUltimateNow(now);
+    setIsUltCutsceneActive(true);
+    setActiveUltCutscene(null);
+    setTimeDisordered(80);
+    setSpecialUltPresentation({ combo, phase: 'dialogue', dialogueIndex: 0 });
+    AetheriaAudioEngine.playSpecialUltimate();
+
+    setCombatParty(prev => {
+      const next = prev.map(c => participantIds.has(c.id) ? { ...c, ultimateEnergy: 0 } : c);
+      loopStateRef.current.combatParty = next;
+      return next;
+    });
+
+    specialUltimateTimeoutsRef.current = [
+      setTimeout(() => {
+        setSpecialUltPresentation(prev => prev ? { ...prev, dialogueIndex: 1 } : prev);
+      }, 800),
+      setTimeout(() => {
+        setSpecialUltPresentation(prev => prev ? { ...prev, phase: 'name' } : prev);
+        spawnFloatingDamageText(px, py - 90, `SPECIAL ULTIMATE: ${combo.name}`, '#fef3c7', 22, true);
+      }, 1550),
+      setTimeout(() => {
+        setSpecialUltPresentation(prev => prev ? { ...prev, phase: 'impact' } : prev);
+
+        for (let i = 0; i < 46; i++) {
+          const particle = new CombatParticle(px, py, Math.random() > 0.45 ? impactColor : secondaryColor, 5);
+          particle.vx *= combo.style === 'vapor' ? 3.2 : 2.5;
+          particle.vy *= combo.style === 'vapor' ? 3.2 : 2.8;
+          particlesRef.current.push(particle);
+        }
+
+        enemiesRef.current.forEach(enemy => {
+          if (enemy.hp <= 0) return;
+          applySkillDamage(enemy, specialDamage, combo.damageElement, true, true, 'ultimate');
+          spawnTextRef.current(enemy.x, enemy.y - enemy.radius - 58, combo.impactText, impactColor, 13, true);
+        });
+
+        if (screenShakeEnabled) {
+          shakeRef.current.intensity = 24;
+          shakeRef.current.x = (Math.random() - 0.5) * 24;
+          shakeRef.current.y = (Math.random() - 0.5) * 24;
+          const arenaEl = document.getElementById('combat-arena-container');
+          if (arenaEl) {
+            arenaEl.classList.add('animate-shake');
+            setTimeout(() => arenaEl.classList.remove('animate-shake'), 500);
+          }
+        }
+      }, 2350),
+      setTimeout(() => {
+        setSpecialUltPresentation(null);
+        setIsUltCutsceneActive(false);
+        setTimeDisordered(0);
+      }, 3600)
+    ];
   };
 
   const triggerBasicAttack = () => {
@@ -4619,6 +4775,87 @@ export default function CombatArena({
           )}
         </AnimatePresence>
 
+        {/* Special Ultimate Cutscene Overlay */}
+        <AnimatePresence>
+          {specialUltPresentation && (() => {
+            const combo = specialUltPresentation.combo;
+            const dialogueLine = combo.dialogue[specialUltPresentation.dialogueIndex] || combo.dialogue[0];
+            const isVapor = combo.style === 'vapor';
+            return (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 z-[65] pointer-events-none select-none overflow-hidden bg-slate-950/90 flex items-center justify-center"
+              >
+                <div className={`absolute inset-0 ${
+                  isVapor
+                    ? 'bg-[radial-gradient(circle_at_center,rgba(251,146,60,0.32),transparent_48%),radial-gradient(circle_at_70%_35%,rgba(34,211,238,0.25),transparent_35%)]'
+                    : 'bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.32),transparent_48%),radial-gradient(circle_at_30%_70%,rgba(34,197,94,0.25),transparent_35%)]'
+                }`} />
+
+                <motion.div
+                  initial={{ scale: 0.7, opacity: 0 }}
+                  animate={{ scale: specialUltPresentation.phase === 'impact' ? 1.16 : 1, opacity: 1 }}
+                  transition={{ duration: 0.32 }}
+                  className={`absolute w-[420px] h-[420px] md:w-[620px] md:h-[620px] rounded-full border ${
+                    isVapor ? 'border-orange-300/25 shadow-[0_0_100px_rgba(251,146,60,0.35)]' : 'border-purple-300/25 shadow-[0_0_100px_rgba(168,85,247,0.35)]'
+                  }`}
+                />
+
+                <motion.div
+                  key={`${combo.id}-${specialUltPresentation.phase}-${specialUltPresentation.dialogueIndex}`}
+                  initial={{ y: 22, scale: 0.96, opacity: 0 }}
+                  animate={{ y: 0, scale: 1, opacity: 1 }}
+                  exit={{ y: -22, opacity: 0 }}
+                  transition={{ duration: 0.28 }}
+                  className="relative z-10 w-[min(92vw,760px)] px-5 text-center"
+                >
+                  {specialUltPresentation.phase === 'dialogue' && (
+                    <div className="mx-auto rounded-2xl border border-white/15 bg-black/55 px-6 py-5 md:px-10 md:py-8 shadow-[0_0_45px_rgba(255,255,255,0.08)] backdrop-blur-md">
+                      <p className={`text-[10px] md:text-xs font-black font-mono uppercase tracking-[0.35em] ${isVapor ? 'text-orange-300' : 'text-emerald-300'}`}>
+                        {dialogueLine.speaker}
+                      </p>
+                      <p className="mt-3 text-3xl md:text-6xl font-black text-white font-display uppercase tracking-wide drop-shadow-[0_0_22px_rgba(255,255,255,0.28)]">
+                        "{dialogueLine.line}"
+                      </p>
+                    </div>
+                  )}
+
+                  {specialUltPresentation.phase === 'name' && (
+                    <div className="space-y-4">
+                      <div className={`mx-auto inline-flex items-center gap-2 rounded-full px-4 py-2 text-[10px] md:text-xs font-black uppercase tracking-[0.28em] border ${
+                        isVapor ? 'border-orange-300/50 bg-orange-500/15 text-orange-200' : 'border-purple-300/50 bg-purple-500/15 text-purple-200'
+                      }`}>
+                        <Sparkles className="w-4 h-4 animate-pulse" />
+                        Special Ultimate
+                      </div>
+                      <h1 className={`text-4xl md:text-8xl font-black font-display uppercase tracking-tight ${
+                        isVapor ? 'text-orange-100 drop-shadow-[0_0_35px_rgba(251,146,60,0.85)]' : 'text-purple-100 drop-shadow-[0_0_35px_rgba(168,85,247,0.85)]'
+                      }`}>
+                        {combo.name}
+                      </h1>
+                    </div>
+                  )}
+
+                  {specialUltPresentation.phase === 'impact' && (
+                    <div className="space-y-4">
+                      <h1 className={`text-4xl md:text-8xl font-black font-display uppercase tracking-tight animate-pulse ${
+                        isVapor ? 'text-cyan-100 drop-shadow-[0_0_38px_rgba(34,211,238,0.95)]' : 'text-emerald-100 drop-shadow-[0_0_38px_rgba(34,197,94,0.95)]'
+                      }`}>
+                        {combo.impactText}
+                      </h1>
+                      <p className="text-[11px] md:text-sm font-black font-mono uppercase tracking-[0.3em] text-white/70">
+                        Full Arena Impact
+                      </p>
+                    </div>
+                  )}
+                </motion.div>
+              </motion.div>
+            );
+          })()}
+        </AnimatePresence>
+
         {/* Boss HP Phase Arena Hazard warning overlay */}
         {bossHp !== null && bossHp > 0 && bossPhase >= 2 && (
           <div className="absolute inset-0 pointer-events-none z-30 flex flex-col justify-between p-4">
@@ -4773,6 +5010,26 @@ export default function CombatArena({
               <Sparkles className="w-6 h-6 text-slate-950 animate-spin" />
               <span className="text-xs uppercase font-extrabold tracking-widest font-display">Burst [Q]</span>
             </button>
+
+            {showSpecialUltimateButton && availableSpecialUltimate && (
+              <button
+                onClick={() => triggerSpecialUltimate()}
+                className={`relative overflow-hidden p-4 rounded-xl flex flex-col items-center justify-center gap-2 active:scale-95 transition-all w-52 h-24 cursor-pointer font-black border animate-pop-pulse ${
+                  availableSpecialUltimate.combo.style === 'vapor'
+                    ? 'bg-orange-400 text-slate-950 border-cyan-200/70 shadow-[0_0_30px_rgba(251,146,60,0.65)]'
+                    : 'bg-purple-500 text-white border-emerald-200/70 shadow-[0_0_30px_rgba(168,85,247,0.65)]'
+                }`}
+              >
+                <span className="absolute inset-x-0 top-0 h-1 bg-white/50" />
+                <Sparkles className="w-6 h-6 animate-pulse" />
+                <span className="text-[11px] uppercase font-black tracking-widest font-display leading-tight">
+                  SPECIAL ULTIMATE READY!
+                </span>
+                <span className="text-[9px] uppercase font-mono tracking-wider opacity-80">
+                  {availableSpecialUltimate.combo.name}
+                </span>
+              </button>
+            )}
           </div>
         </div>
         )}
@@ -4824,6 +5081,24 @@ export default function CombatArena({
               mobileJoystickState.current = { active, x, y };
             }}
           />
+          {showSpecialUltimateButton && availableSpecialUltimate && (
+            <button
+              onPointerDown={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                triggerSpecialUltimate();
+              }}
+              className={`fixed left-1/2 bottom-[7.25rem] z-50 -translate-x-1/2 w-[min(72vw,300px)] min-h-[54px] rounded-2xl border px-4 py-2 text-center font-black uppercase tracking-widest shadow-2xl active:scale-95 transition-all animate-pop-pulse touch-none ${
+                availableSpecialUltimate.combo.style === 'vapor'
+                  ? 'bg-orange-400 text-slate-950 border-cyan-100/80 shadow-[0_0_28px_rgba(251,146,60,0.7)]'
+                  : 'bg-purple-500 text-white border-emerald-100/80 shadow-[0_0_28px_rgba(168,85,247,0.7)]'
+              }`}
+              style={{ touchAction: 'none' }}
+            >
+              <span className="block text-[10px] leading-tight">SPECIAL ULTIMATE READY!</span>
+              <span className="block text-[8px] font-mono opacity-80 mt-0.5 leading-tight">{availableSpecialUltimate.combo.name}</span>
+            </button>
+          )}
           <MobileControls 
             onAttack={() => {
               if (isPaused || isGameOver || countdownValue !== null) return;

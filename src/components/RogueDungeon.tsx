@@ -23,6 +23,7 @@ interface RogueDungeonProps {
   onExitToWiki?: () => void;
   onAddItems?: (itemType: 'char_xp' | 'ascension', amount: number) => void;
   devCheatsEnabled?: boolean;
+  playerLevel?: number;
   screenShakeEnabled?: boolean;
   combatSpeed?: number;
   fpsLimit?: '60' | 'none';
@@ -53,6 +54,7 @@ export default function RogueDungeon({
   onExitToWiki,
   onAddItems,
   devCheatsEnabled = true,
+  playerLevel = 1,
   screenShakeEnabled = true,
   combatSpeed = 1.0,
   fpsLimit = '60',
@@ -383,6 +385,7 @@ export default function RogueDungeon({
           onExitToWiki={onExitToWiki}
           activeDamageSkin={activeDamageSkin}
           devCheatsEnabled={devCheatsEnabled}
+          playerLevel={playerLevel}
           screenShakeEnabled={screenShakeEnabled}
           combatSpeed={combatSpeed}
           fpsLimit={fpsLimit}

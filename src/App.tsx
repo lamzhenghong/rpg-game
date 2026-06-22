@@ -30,6 +30,7 @@ import { AetheriaAudioEngine } from './utils/audio';
 import { getArtifactFusionRule, isSameArtifactPart } from './utils/artifactFusion';
 import { UI_THEMES, UI_THEME_UNLOCK_LEVEL, getUiTheme, isUiThemeUnlocked, normalizeUiTheme } from './utils/uiThemes';
 import { getStandardFiveStarCharacters } from './utils/limitedBanners';
+import { SPECIAL_ULTIMATE_UNLOCK_LEVEL } from './utils/specialUltimates';
 import mainMenuBg from '../assets/main_menu_bg.png';
 import gameLogoImg from '../assets/game_logo.png';
 import StoryMode from './components/StoryMode';
@@ -44,6 +45,7 @@ const INITIAL_SAVE_STATE: SaveState = {
   playerLevel: 1,
   playerExp: 0,
   playerExpMax: 100,
+  specialUltimateUnlockNotified: false,
   inventoryWeapons: [
     { id: 'start_w_1', name: 'Dull Blade (Sword)', rarity: 3, weaponType: 'Sword', baseAtk: 18, statBonus: 'ATK +3%', level: 1 },
     { id: 'start_w_2', name: 'Iron Point (Claymore)', rarity: 3, weaponType: 'Claymore', baseAtk: 24, statBonus: 'Physical DMG +4%', level: 1 },
@@ -834,6 +836,20 @@ export default function App() {
       return withPlayTime;
     });
   };
+
+  useEffect(() => {
+    if ((saveState.playerLevel || 1) < SPECIAL_ULTIMATE_UNLOCK_LEVEL || saveState.specialUltimateUnlockNotified) return;
+
+    showInGameAlert(
+      'SPECIAL ULTIMATE HAS UNLOCKED, HEAD INTO A BATTLE WITH 2 LIMITED 5 STAR HERO TO CHECK IT OUT!',
+      'Valid pairs: Aurelia + Kaelen or Maelis + Veyra. Both Ultimate Gauges must be full.',
+      'success'
+    );
+    triggerSaveUpdate(prev => ({
+      ...prev,
+      specialUltimateUnlockNotified: true
+    }));
+  }, [saveState.playerLevel, saveState.specialUltimateUnlockNotified]);
 
   const handleDevAddTenLevels = () => {
     AetheriaAudioEngine.playLevelUp();
@@ -2906,6 +2922,7 @@ export default function App() {
                     onExitToWiki={() => setActiveScreen('wiki')}
                     onAddItems={handleAddItems}
                     devCheatsEnabled={devCheatsEnabled}
+                    playerLevel={saveState.playerLevel || 1}
                     screenShakeEnabled={screenShakeEnabled}
                     combatSpeed={combatSpeed}
                     fpsLimit={fpsLimit}
@@ -2940,6 +2957,7 @@ export default function App() {
                     onExitToWiki={() => setActiveScreen('wiki')}
                     onAddItems={handleAddItems}
                     devCheatsEnabled={devCheatsEnabled}
+                    playerLevel={saveState.playerLevel || 1}
                     screenShakeEnabled={screenShakeEnabled}
                     combatSpeed={combatSpeed}
                     fpsLimit={fpsLimit}
@@ -4100,6 +4118,7 @@ export default function App() {
             onExitToWiki={() => setStoryBattleActive(false)}
             onAddItems={handleAddItems}
             devCheatsEnabled={devCheatsEnabled}
+            playerLevel={saveState.playerLevel || 1}
             screenShakeEnabled={screenShakeEnabled}
             combatSpeed={combatSpeed}
             fpsLimit={fpsLimit}
