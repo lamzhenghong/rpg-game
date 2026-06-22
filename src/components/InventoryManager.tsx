@@ -6,12 +6,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { PLAYABLE_CHARACTERS } from '../data/characters';
-import { PlayableCharacter, Weapon, InventoryItem, ElementType, Quest, Artifact, ArtifactSlot, ArtifactSet } from '../types';
-import { Shield, Sparkles, Coins, Hammer, Star, StarOff, ArrowUpCircle, BookOpen, Smile, User, Flame, Droplet, Snowflake, Zap, Wind, Leaf, Search, HelpCircle, CheckCircle2, Circle, Layers, Lock, Unlock, Trash2 } from 'lucide-react';
+import { PlayableCharacter, Weapon, InventoryItem, ElementType, Artifact, ArtifactSlot, ArtifactSet } from '../types';
+import { Shield, Sparkles, Coins, Hammer, Star, StarOff, ArrowUpCircle, BookOpen, Smile, User, Flame, Droplet, Snowflake, Zap, Wind, Leaf, Search, Layers, Lock, Unlock, Trash2 } from 'lucide-react';
 import { AetheriaAudioEngine } from '../utils/audio';
 import { WEAPONS_DATABASE } from '../data/weapons';
 import { getAccumulatedPortraitBuffs } from '../utils/portraits';
-import ElementalReactionsModal from './ElementalReactionsModal';
 import { LanguageType, t } from '../utils/i18n';
 import { ARTIFACT_SETS, ARTIFACT_NAMES, getArtifactMainStat } from '../data/artifacts';
 import { createFusedArtifact, getArtifactFusionRule, getEligibleFusionArtifacts } from '../utils/artifactFusion';
@@ -95,8 +94,6 @@ interface InventoryManagerProps {
   onUpgradeWeapon?: (weaponUid: string) => void;
   onShowAlert: (msg: string, solution?: string, type?: 'success' | 'error' | 'info') => void;
   onAddItems?: (itemType: 'char_xp' | 'ascension', amount: number) => void;
-  activeQuests?: Quest[];
-  onClaimQuestReward?: (qId: string) => void;
   characterPortraits?: Record<string, number>;
   devCheatsEnabled?: boolean;
   language?: LanguageType;
@@ -123,8 +120,6 @@ export default function InventoryManager({
   onUpgradeWeapon,
   onShowAlert,
   onAddItems,
-  activeQuests = [],
-  onClaimQuestReward,
   characterPortraits = {},
   devCheatsEnabled = true,
   language = 'en'
@@ -165,8 +160,6 @@ export default function InventoryManager({
   const [artifactEquipSearch, setArtifactEquipSearch] = useState('');
 
   const [weaponSearchQuery, setWeaponSearchQuery] = useState('');
-  const [isReactionsModalOpen, setIsReactionsModalOpen] = useState(false);
-  const [activeQuestTab, setActiveQuestTab] = useState<'daily' | 'weekly' | 'normal'>('daily');
 
   const selectedChar = PLAYABLE_CHARACTERS.find(c => c.id === selectedCharId) || PLAYABLE_CHARACTERS[0];
   const charLevel = characterLevels[selectedChar.id] || 1;
@@ -505,19 +498,6 @@ export default function InventoryManager({
 
         {/* Currency summary & triggers */}
         <div className="flex flex-wrap items-center gap-4">
-          {/* Reaction Cheat Sheet Button */}
-          <button
-            type="button"
-            onClick={() => {
-              setIsReactionsModalOpen(true);
-              AetheriaAudioEngine.playClick();
-            }}
-            className="bg-indigo-600/30 hover:bg-indigo-650/50 text-indigo-300 border border-indigo-500/30 text-xs font-black uppercase tracking-wider px-4 py-2.5 rounded-lg transition-all active:scale-95 cursor-pointer flex items-center gap-2 shadow-md"
-          >
-            <HelpCircle className="w-4 h-4 text-indigo-400" />
-            Reaction Cheat Sheet
-          </button>
-
           <div className="bg-black/30 border border-white/10 px-4 py-2 rounded-lg flex items-center gap-2.5">
             <Coins className="w-4 h-4 text-[#fbbf24]" />
             <span className="text-xs text-slate-400 font-mono uppercase">Mora Gold:</span>
@@ -1757,227 +1737,6 @@ export default function InventoryManager({
               </div>
             </div>
 
-            {/* --- ELEMENTAL REACTIONS CHEAT SHEET --- BELOW CHARACTER --- */}
-            <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-indigo-400 animate-pulse"></span>
-                <h4 className="text-sm font-black text-slate-205 text-white uppercase tracking-widest font-display">
-                  Elemental Reaction Matrix Cheat Sheet
-                </h4>
-              </div>
-              <p className="text-xs text-slate-400 lowercase font-mono">
-                infuse multiple elements in battle to trigger devastating hypercombos with status effects.
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 max-h-[350px] overflow-y-auto pr-1">
-                {[
-                  {
-                    pair: ['Pyro 🟥', 'Hydro 🟦'],
-                    name: 'Vaporize Combo',
-                    mult: '2.0x DMG Multiplier',
-                    effect: 'Instantly vaporizes slimes deals massive double damage.',
-                    colorClass: 'from-orange-500/10 via-slate-900/40 to-blue-500/10 border-orange-500/20'
-                  },
-                  {
-                    pair: ['Pyro 🟥', 'Electro 🟪'],
-                    name: 'Overloaded Blast',
-                    mult: '+400 Bonus DMG',
-                    effect: 'Causes massive Area knockback shunt and pink kinetic explosion.',
-                    colorClass: 'from-rose-500/10 via-slate-900/40 to-purple-500/10 border-rose-500/20'
-                  },
-                  {
-                    pair: ['Hydro 🟦', 'Cryo ❄️'],
-                    name: 'Frozen Hold',
-                    mult: '3.5s Stun CC',
-                    effect: 'Hostile targets are locked completely frozen and inactive.',
-                    colorClass: 'from-blue-500/10 via-slate-900/40 to-sky-400/10 border-sky-400/20'
-                  },
-                  {
-                    pair: ['Dendro 🟩', 'Hydro 🟦'],
-                    name: 'Bloom Eruption',
-                    mult: '+750 Splash DMG',
-                    effect: 'Spawns nature cores that burst out green splash shockwaves.',
-                    colorClass: 'from-emerald-500/10 via-slate-900/40 to-blue-500/10 border-emerald-500/20'
-                  },
-                  {
-                    pair: ['Dendro 🟩', 'Electro 🟪'],
-                    name: 'Hyperbloom Quasar',
-                    mult: '2.3x DMG Multiplier',
-                    effect: 'Shoots tracking homing sparks at up to 3 surrounding enemies.',
-                    colorClass: 'from-emerald-500/10 via-slate-900/40 to-purple-500/10 border-emerald-400/20'
-                  },
-                  {
-                    pair: ['Dendro 🟩', 'Pyro 🟥'],
-                    name: 'Burning Ignition',
-                    mult: 'Continuous ticks DoT',
-                    effect: 'Deep ignition ticks burn HP for over 120 battle frames.',
-                    colorClass: 'from-emerald-500/10 via-slate-900/40 to-red-500/10 border-red-500/20'
-                  },
-                  {
-                    pair: ['Cryo ❄️', 'Electro 🟪'],
-                    name: 'Superconduct Shred',
-                    mult: '+200 DMG & DEF Shred',
-                    effect: 'Reduces enemy defensive stats and deals instant cold snap damage.',
-                    colorClass: 'from-sky-500/10 via-slate-900/40 to-purple-500/10 border-purple-500/20'
-                  },
-                  {
-                    pair: ['Geo 🟨', 'Any Element'],
-                    name: 'Crystallize Aegis',
-                    mult: 'Active Shield Shard',
-                    effect: 'Drops structural crystal shield shards to absorb incoming blows.',
-                    colorClass: 'from-yellow-500/10 via-slate-900/40 to-slate-800/20 border-yellow-500/20'
-                  },
-                  {
-                    pair: ['Anemo 🌀', 'Any Element'],
-                    name: 'Swirl Gale Splash',
-                    mult: 'Element Spreader',
-                    effect: 'Spreads existing slimes debuffs to close combatants instantly.',
-                    colorClass: 'from-teal-500/10 via-slate-900/40 to-sky-550/10 border-teal-500/20'
-                  }
-                ].map((rc, index) => (
-                  <div key={index} className={`p-4 bg-gradient-to-br ${rc.colorClass} border rounded-xl space-y-2`}>
-                    <div className="flex justify-between items-center border-b border-white/5 pb-1.5">
-                      <span className="text-[10px] font-mono tracking-wider font-extrabold uppercase text-slate-400">
-                        {rc.pair.join(' + ')}
-                      </span>
-                      <span className="text-[10px] font-mono font-black text-amber-400 uppercase tracking-tight bg-amber-400/5 px-2 py-0.5 rounded border border-amber-400/10">
-                        {rc.mult}
-                      </span>
-                    </div>
-                    <div>
-                      <h5 className="text-xs font-black text-white uppercase tracking-wider font-display">{rc.name}</h5>
-                      <p className="text-[11px] text-slate-450 text-slate-400 mt-1 leading-relaxed font-sans">{rc.effect}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* --- QUEST LOG COMPONENT --- ABOVE QUEST LOG, BELOW CHARACTER --- */}
-            <div className="mt-8 pt-6 border-t border-white/10 space-y-4">
-              <div className="flex justify-between items-center flex-wrap gap-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-1.5 h-3.5 bg-amber-400"></div>
-                  <h4 className="text-sm font-black text-white uppercase tracking-widest font-display">
-                    Squadron Quest ledger ({activeQuests.length} Remaining)
-                  </h4>
-                </div>
-                
-                {/* Visual tabs to toggle between Daily, Weekly, and Normal */}
-                <div className="flex bg-black/45 p-1 rounded-lg border border-white/10 text-[10px] font-mono">
-                  {(['daily', 'weekly', 'normal'] as const).map((tab) => {
-                    const count = activeQuests.filter(q => {
-                      if (tab === 'normal') return q.group === 'normal' || !q.group;
-                      return q.group === tab;
-                    }).length;
-                    return (
-                      <button
-                        key={tab}
-                        onClick={() => {
-                          setActiveQuestTab(tab);
-                          AetheriaAudioEngine.playClick();
-                        }}
-                        className={`px-3 py-1.5 rounded text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
-                          activeQuestTab === tab 
-                            ? 'bg-amber-400 text-slate-950 shadow-md' 
-                            : 'text-slate-400 hover:text-white hover:bg-white/5'
-                        }`}
-                      >
-                        {tab === 'normal' ? 'campaign' : tab} ({count})
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="space-y-3 max-h-[350px] overflow-y-auto pr-1">
-                {(() => {
-                  const filtered = activeQuests.filter(q => {
-                    if (activeQuestTab === 'normal') return q.group === 'normal' || !q.group;
-                    return q.group === activeQuestTab;
-                  });
-
-                  if (filtered.length === 0) {
-                    return (
-                      <div className="text-center py-10 bg-black/15 border border-dashed border-white/5 rounded-xl text-xs font-mono text-slate-500 uppercase tracking-widest">
-                        All check-points in this sector completed!
-                      </div>
-                    );
-                  }
-
-                  return filtered.map((q) => {
-                    const pct = Math.min(100, (q.currentValue / q.targetValue) * 100);
-                    const isDaily = q.group === 'daily';
-                    const isWeekly = q.group === 'weekly';
-                    const diffTag = isDaily 
-                      ? 'EASY DAILY' 
-                      : isWeekly 
-                        ? 'MEDIUM WEEKLY' 
-                        : 'HARD CAMPAIGN';
-                    const diffColor = isDaily 
-                      ? 'bg-emerald-450/15 text-emerald-400 border-emerald-500/25' 
-                      : isWeekly 
-                        ? 'bg-purple-450/15 text-purple-300 border-purple-500/25' 
-                        : 'bg-red-450/15 text-red-400 border-red-500/25';
-
-                    return (
-                      <div key={q.id} className="p-4 bg-black/40 rounded-xl border border-white/5 flex flex-col gap-2 relative">
-                        <div className="flex justify-between items-start gap-3">
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <span className={`text-[8.5px] font-mono font-black uppercase tracking-widest px-1.5 py-0.5 border rounded ${diffColor}`}>
-                                {diffTag}
-                              </span>
-                              <span className="text-[11px] font-black text-slate-100 uppercase tracking-wider leading-tight font-display">{q.name}</span>
-                            </div>
-                            <span className="text-[10px] text-slate-400 leading-relaxed block mt-1">{q.desc}</span>
-                          </div>
-                          {q.completed ? (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-405 text-emerald-400 shrink-0 mt-0.5 animate-bounce" />
-                          ) : (
-                            <Circle className="w-4 h-4 text-slate-705 text-slate-700 shrink-0 mt-0.5" />
-                          )}
-                        </div>
-
-                        {/* Progress bar info */}
-                        <div className="flex items-center gap-2 text-[9px] font-mono text-slate-400 mt-1">
-                          <div className="bg-slate-950 rounded-sm flex-1 h-2 overflow-hidden border border-white/5">
-                            <div 
-                              className="bg-gradient-to-r from-emerald-500 to-emerald-400 h-full shadow-[0_0_8px_rgba(52,211,153,0.5)] transition-all duration-300" 
-                              style={{ width: `${pct}%` }} 
-                            />
-                          </div>
-                          <span className="font-bold font-mono text-slate-200 shrink-0">{q.currentValue}/{q.targetValue}</span>
-                        </div>
-
-                        {/* Claim reward link */}
-                        <div className="flex justify-between items-center pt-2.5 border-t border-white/5 mt-1">
-                          <div className="text-[9.5px] text-slate-400 flex items-center gap-2 font-mono leading-none">
-                            <span className="uppercase text-[8px] tracking-widest text-slate-500">REWARDS:</span>
-                            <span className="text-amber-350 text-amber-350 font-black">+{q.rewardTokens}G</span>
-                            <span className="text-slate-500">•</span>
-                            <span className="text-yellow-400 font-bold">+{q.rewardMora.toLocaleString()} Mora</span>
-                          </div>
-
-                          {q.completed ? (
-                            <button
-                              onClick={() => {
-                                if (onClaimQuestReward) onClaimQuestReward(q.id);
-                              }}
-                              className="bg-amber-400 hover:bg-amber-300 text-slate-950 text-[10px] font-black px-3 py-1.5 rounded uppercase tracking-widest transition-all duration-100 transform hover:scale-105 active:scale-95 cursor-pointer shadow-md shadow-amber-400/10"
-                            >
-                              CLAIM NOW
-                            </button>
-                          ) : (
-                            <span className="text-[8.5px] font-black uppercase tracking-widest text-slate-650 text-slate-500">IN PROGRESS</span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  });
-                })()}
-              </div>
-            </div>
 
           </div>
           )}
@@ -1991,12 +1750,6 @@ export default function InventoryManager({
 
       {salvageConfirmModal && typeof document !== 'undefined' ? createPortal(salvageConfirmModal, document.body) : null}
 
-      {isReactionsModalOpen && (
-        <ElementalReactionsModal
-          isOpen={isReactionsModalOpen}
-          onClose={() => setIsReactionsModalOpen(false)}
-        />
-      )}
     </div>
   );
 }

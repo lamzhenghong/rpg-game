@@ -3165,24 +3165,7 @@ export default function App() {
                         </p>
                       </div>
 
-                      {/* Search Bar */}
-                      <div className="relative w-full md:w-64 shrink-0">
-                        <input
-                          type="text"
-                          value={partySearchQuery}
-                          onChange={(e) => setPartySearchQuery(e.target.value)}
-                          placeholder={t('search_placeholder', language)}
-                          className="w-full bg-slate-900/60 border border-white/10 hover:border-white/20 focus:border-indigo-500 rounded-lg px-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none transition-all uppercase tracking-wide font-mono font-bold"
-                        />
-                        {partySearchQuery && (
-                          <button
-                            onClick={() => setPartySearchQuery('')}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-[10px] font-black cursor-pointer"
-                          >
-                            ✕
-                          </button>
-                        )}
-                      </div>
+
                     </div>
 
                     {/* Element, Weapon Class & Rarity Filter Panel */}
@@ -3523,6 +3506,27 @@ export default function App() {
                               </button>
                             );
                           })}
+                        </div>
+                      </div>
+
+                      {/* Search Bar */}
+                      <div className="border-t border-white/5 pt-4">
+                        <div className="relative w-full">
+                          <input
+                            type="text"
+                            value={partySearchQuery}
+                            onChange={(e) => setPartySearchQuery(e.target.value)}
+                            placeholder={t('search_placeholder', language)}
+                            className="w-full bg-slate-900/60 border border-white/10 hover:border-white/20 focus:border-indigo-500 rounded-lg px-3 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none transition-all uppercase tracking-wide font-mono font-bold"
+                          />
+                          {partySearchQuery && (
+                            <button
+                              onClick={() => setPartySearchQuery('')}
+                              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-[10px] font-black cursor-pointer"
+                            >
+                              x
+                            </button>
+                          )}
                         </div>
                       </div>
 
