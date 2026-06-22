@@ -121,26 +121,10 @@
 html,
 body,
 #root {
-  min-height: 100dvh;
   touch-action: none;
   overscroll-behavior: none;
   user-select: none;
   -webkit-user-select: none;
-  background: #020617;
-}
-
-html.mobile-auto-fullscreen,
-html.mobile-auto-fullscreen body,
-html.mobile-auto-fullscreen #root {
-  min-height: 100dvh;
-}
-
-@supports (-webkit-touch-callout: none) {
-  html.mobile-auto-fullscreen,
-  html.mobile-auto-fullscreen body,
-  html.mobile-auto-fullscreen #root {
-    min-height: -webkit-fill-available;
-  }
 }
 
 canvas {
