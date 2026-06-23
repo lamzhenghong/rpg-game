@@ -12,7 +12,7 @@ import {
   Sun, CloudRain, CloudLightning, Snowflake, Layers
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { AetheriaAudioEngine } from '../utils/audio';
+import { AetheriaAudioEngine, SPECIAL_ULTIMATE_THEME_DURATION_MS } from '../utils/audio';
 import { LanguageType, t } from '../utils/i18n';
 import { getAccumulatedPortraitBuffs } from '../utils/portraits';
 import { WEAPONS_DATABASE } from '../data/weapons';
@@ -434,6 +434,7 @@ export default function CombatArena({
     return () => {
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
       specialUltimateTimeoutsRef.current.forEach(timeoutId => clearTimeout(timeoutId));
+      AetheriaAudioEngine.stopSpecialUltimateTheme(false);
     };
   }, []);
 
@@ -1850,6 +1851,7 @@ export default function CombatArena({
     setActiveUltCutscene(null);
     setTimeDisordered(80);
     setSpecialUltPresentation({ combo, phase: 'dialogue', dialogueIndex: 0 });
+    AetheriaAudioEngine.playSpecialUltimateTheme();
     AetheriaAudioEngine.playSpecialUltimate();
 
     setCombatParty(prev => {
@@ -1861,11 +1863,11 @@ export default function CombatArena({
     specialUltimateTimeoutsRef.current = [
       setTimeout(() => {
         setSpecialUltPresentation(prev => prev ? { ...prev, dialogueIndex: 1 } : prev);
-      }, 1300),
+      }, 2200),
       setTimeout(() => {
         setSpecialUltPresentation(prev => prev ? { ...prev, phase: 'name' } : prev);
         spawnFloatingDamageText(px, py - 90, `SPECIAL ULTIMATE: ${combo.name}`, '#fef3c7', 22, true);
-      }, 2800),
+      }, 4800),
       setTimeout(() => {
         setSpecialUltPresentation(prev => prev ? { ...prev, phase: 'impact' } : prev);
 
@@ -1892,12 +1894,13 @@ export default function CombatArena({
             setTimeout(() => arenaEl.classList.remove('animate-shake'), 500);
           }
         }
-      }, 4000),
+      }, 6800),
       setTimeout(() => {
         setSpecialUltPresentation(null);
         setIsUltCutsceneActive(false);
         setTimeDisordered(0);
-      }, 5600)
+        AetheriaAudioEngine.stopSpecialUltimateTheme();
+      }, SPECIAL_ULTIMATE_THEME_DURATION_MS)
     ];
   };
 

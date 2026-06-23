@@ -129,11 +129,13 @@ export default function StoryStage({ stageId, previousStars, onDeploy, onClose, 
                 <span className="font-bold text-amber-400">+{moraReward.toLocaleString()}</span>
                 <span className="text-[10px] text-slate-400">Mora</span>
               </div>
-              <div className="bg-[#0b1529] border border-indigo-500/20 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 text-xs text-slate-200 shadow-sm">
-                <Award className="w-4 h-4 text-indigo-400" />
-                <span className="font-bold text-indigo-400">+{charXpReward}</span>
-                <span className="text-[10px] text-slate-400">Hero\'s Wit</span>
-              </div>
+              {charXpReward > 0 && (
+                <div className="bg-[#0b1529] border border-indigo-500/20 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 text-xs text-slate-200 shadow-sm">
+                  <Award className="w-4 h-4 text-indigo-400" />
+                  <span className="font-bold text-indigo-400">+{charXpReward}</span>
+                  <span className="text-[10px] text-slate-400">Hero\'s Wit</span>
+                </div>
+              )}
               {!isHardMode && spec.firstClearRewards.specialItem && (
                 <div className="bg-[#1e112c] border border-purple-500/20 px-2.5 py-1.5 rounded-lg flex items-center gap-1.5 text-xs text-slate-200 shadow-sm w-full">
                   <ShieldAlert className="w-4 h-4 text-purple-400" />

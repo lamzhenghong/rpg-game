@@ -108,6 +108,16 @@ export default function StoryMode({
   // Character Stories logic
   const handlePlayCharStoryAct = (charId: string, act: number) => {
     AetheriaAudioEngine.playClick();
+    const completedCount = storyProgress.completedCharacterStoryActs[charId] || 0;
+    if (!devCheatsEnabled && completedCount < act - 1) {
+      onShowAlert(
+        'Character Story Locked',
+        `Clear Act ${act - 1} before starting this optional side battle.`,
+        'info'
+      );
+      return;
+    }
+
     const script = getCharacterStoryScript(charId, act);
     
     // Set VN slides
@@ -422,9 +432,9 @@ export default function StoryMode({
                 const completedCount = storyProgress.completedCharacterStoryActs[char.id] || 0;
 
                 const acts = [
-                  { index: 1, title: 'Act I: Origin Mythos', desc: 'Face the initial trial to unlock their basic memories and core secrets.' },
-                  { index: 2, title: 'Act II: Elemental Awakening', desc: 'Dive deeper into their elemental connection and unlock portrait buffs.' },
-                  { index: 3, title: 'Act III: Ascendance Trial', desc: 'The ultimate trial. Maximize stats boost, earn massive gems, and claim unique core gear.' }
+                  { index: 1, title: 'Act I: Origin Mythos', desc: 'A normal NPC memory battle that introduces the character origin. Rewards Mora and Gems only.' },
+                  { index: 2, title: 'Act II: Memory Pressure', desc: 'An elite NPC memory battle that reveals a deeper personal conflict. Rewards Mora and Gems only.' },
+                  { index: 3, title: 'Act III: Final Memory', desc: 'A boss memory battle that concludes the side story. Rewards Mora and Gems only.' }
                 ];
 
                 return (
@@ -434,7 +444,7 @@ export default function StoryMode({
                         {char.name}'s Character Story Acts
                       </h3>
                       <p className="text-xs text-slate-400">
-                        Investigate {char.name}'s origin and unleash their true elemental potential.
+                        Character Stories are optional side battles that let you learn more about characters and earn Mora and Gems only.
                       </p>
                     </div>
 

@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import { getElementalReactionGuideLines } from './elementalReactions';
+
 export interface GuildConflict {
   title: string;
   desc: string;
@@ -67,7 +69,7 @@ export const GDD_DATA: GDDData = {
       element: 'Hydro (Water)',
       god: 'Nautilus, Sovereign of Deep Currents',
       capital: 'Grand Lagoon Archipelago',
-      ruler: 'The High Merchant Syndicate & Grand Admiral Kaelen',
+      ruler: 'The High Merchant Syndicate & Grand Admiral Council',
       desc: 'Nautila is a floating-bridge trade republic comprising hundreds of tropical islands connected by colossal aqueducts, canals, and shipping channels. It represents the global financial capital where products and materials from all nations are traded. It has a relaxed but highly bureaucratic society.',
       iconColor: 'from-cyan-500 to-blue-600',
       majorFactions: [
@@ -154,15 +156,7 @@ export const GDD_DATA: GDDData = {
       title: 'The Seven Elemental Matrix',
       iconName: 'Zap',
       summary: 'The interaction of elements applied on enemies triggers destructive elemental reactions, allowing strategic play and high damage bursts.',
-      details: [
-        'Vaporize (Pyro + Hydro): Boosts the damage of the triggering element stroke by a multiplier of 2x.',
-        'Melt (Pyro + Cryo): Triggers an immediate explosion that deals bonus damage and bypasses 30% of target defense armor.',
-        'Frozen (Hydro + Cryo): Completely immobilizes the enemy for 3.5 seconds. Striking a frozen target with a Claymore (Heavy) triggers "Shatter," dealing massive Physical damage.',
-        'Overloaded (Pyro + Electro): Creates a concussive fire blast that deals high Pyro damage and knocks back lightweight enemies.',
-        'Superconduct (Cryo + Electro): Unleashes a cold crackle that shreds target physical and kinetic defenses by 40%.',
-        'Swirl (Anemo + Any except Geo/Dendro): Spreads the active element across all surrounding enemies, causing wide-area reactive damage.',
-        'Crystallize (Geo + Pyro/Hydro/Cryo/Electro): Drops an elemental shield shard. Picking up the shard grants the party a custom shield absorbing that specific element.'
-      ]
+      details: getElementalReactionGuideLines()
     },
     {
       id: 'char_switch',

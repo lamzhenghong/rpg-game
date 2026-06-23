@@ -36,7 +36,7 @@ import mainMenuBg from '../assets/main_menu_bg.png';
 import gameLogoImg from '../assets/game_logo.png';
 import StoryMode from './components/StoryMode';
 import StoryCutscene from './components/StoryCutscene';
-import { getStageSpec, getStageDialogue } from './data/storyStages';
+import { getStageSpec, getStageDialogue, getCharacterStoryScript } from './data/storyStages';
 
 const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
@@ -1513,10 +1513,10 @@ export default function App() {
         const act = storyBattleConfig.act!;
         const actPrev = nextCompletedCharacterStoryActs[charId] || 0;
         if (actPrev < act) {
-          const gemReward = act === 1 ? 200 : act === 2 ? 400 : 600;
-          nextGems += gemReward;
+          const spec = getStageSpec(stageId);
+          nextGems += spec.firstClearRewards.gems;
+          nextMora += spec.firstClearRewards.mora;
           nextCompletedCharacterStoryActs[charId] = act;
-          nextCharacterPortraits[charId] = Math.min(6, (nextCharacterPortraits[charId] || 0) + 1);
           const loreKey = `${charId}_act_${act}_clear`;
           if (!nextUnlockedLoreEntries.includes(loreKey)) {
             nextUnlockedLoreEntries.push(loreKey);
@@ -1603,11 +1603,27 @@ export default function App() {
       return updatedState;
     });
 
+    if (isCharStory) {
+      const spec = getStageSpec(stageId);
+      if (storyBattleConfig.charId && storyBattleConfig.act) {
+        const script = getCharacterStoryScript(storyBattleConfig.charId, storyBattleConfig.act);
+        if (script.after.length > 0) {
+          setActiveCutsceneSlides(script.after);
+        }
+      }
+      showInGameAlert(
+        "Character Story Cleared!",
+        `Received +${spec.firstClearRewards.gems} Gems and +${spec.firstClearRewards.mora.toLocaleString()} Mora. Character Stories do not grant stat bonuses or combat power.`,
+        "success"
+      );
+      return;
+    }
+
     const dialogue = getStageDialogue(stageId);
     if (dialogue && dialogue.after && dialogue.after.length > 0) {
       setActiveCutsceneSlides(dialogue.after);
     } else {
-      showInGameAlert("Victory!", "Story battle resolved successfully. Spent drops added to inventory!", "success");
+      showInGameAlert("Victory!", "Story battle resolved successfully. First-clear drops added where available!", "success");
     }
   };
 

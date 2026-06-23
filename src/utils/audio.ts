@@ -3,24 +3,62 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+export const SPECIAL_ULTIMATE_BGM_NAME = 'Resonance of Aetheria';
+export const SPECIAL_ULTIMATE_THEME_DURATION_MS = 9_000;
+const BASE_BGM_GAIN = 0.15;
+const BASE_SPECIAL_ULTIMATE_GAIN = 0.17;
+const MOBILE_BGM_VOLUME_MULTIPLIER = 1.45;
+
+export const getBgmVolumeMultiplierForDevice = (isMobile: boolean) => {
+  return isMobile ? MOBILE_BGM_VOLUME_MULTIPLIER : 1;
+};
+
+const detectMobileAudioDevice = () => {
+  if (typeof navigator === 'undefined') return false;
+  const userAgent = navigator.userAgent || '';
+  const hasTouch = navigator.maxTouchPoints > 0;
+  return hasTouch && /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent);
+};
+
 // Simple self-contained Web Audio API synthesizer for retro-arcade RPG effects and BGM
 class AudioEngine {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
   private musicGain: GainNode | null = null;
+  private specialUltimateGain: GainNode | null = null;
   private sfxGain: GainNode | null = null;
   private isMuted: boolean = false;
   private isMusicPlaying: boolean = false;
   private musicTimerId: any = null;
+  private specialUltimateTimerIds: ReturnType<typeof setTimeout>[] = [];
+  private specialUltimateIntervalId: ReturnType<typeof setInterval> | null = null;
+  private isSpecialUltimateThemePlaying: boolean = false;
   private notesPlayed: number = 0;
   private bgmVolScale: number = 1.0;
   private sfxVolScale: number = 1.0;
   private currentScreen: string = 'menu';
   private currentWeather: 'Sunny' | 'Rain' | 'Thunderstorm' | 'Snow' = 'Sunny';
   private isBossFightActive: boolean = false;
+  private isMobileAudioDevice: boolean = detectMobileAudioDevice();
 
   constructor() {
     // Lazy initialisation inside user interaction
+  }
+
+  private getEffectiveBgmGain() {
+    return BASE_BGM_GAIN * this.bgmVolScale * getBgmVolumeMultiplierForDevice(this.isMobileAudioDevice);
+  }
+
+  private getSpecialUltimateGainTarget() {
+    return BASE_SPECIAL_ULTIMATE_GAIN * this.bgmVolScale * getBgmVolumeMultiplierForDevice(this.isMobileAudioDevice);
+  }
+
+  private fadeGain(gainNode: GainNode | null, targetValue: number, duration: number) {
+    if (!this.ctx || !gainNode) return;
+    const now = this.ctx.currentTime;
+    gainNode.gain.cancelScheduledValues(now);
+    gainNode.gain.setValueAtTime(Math.max(0.0001, gainNode.gain.value), now);
+    gainNode.gain.linearRampToValueAtTime(Math.max(0.0001, targetValue), now + duration);
   }
 
   private init() {
@@ -35,8 +73,12 @@ class AudioEngine {
       this.masterGain.connect(this.ctx.destination);
 
       this.musicGain = this.ctx.createGain();
-      this.musicGain.gain.value = this.bgmVolScale * 0.15; // Scaled BGM
+      this.musicGain.gain.value = this.getEffectiveBgmGain(); // Scaled BGM
       this.musicGain.connect(this.masterGain);
+
+      this.specialUltimateGain = this.ctx.createGain();
+      this.specialUltimateGain.gain.value = 0.0001;
+      this.specialUltimateGain.connect(this.masterGain);
 
       this.sfxGain = this.ctx.createGain();
       this.sfxGain.gain.value = this.sfxVolScale * 0.5; // Scaled SFX
@@ -76,7 +118,7 @@ class AudioEngine {
   public setBgmVolume(scale: number) {
     this.bgmVolScale = scale;
     if (this.musicGain && this.ctx) {
-      this.musicGain.gain.setValueAtTime(scale * 0.15, this.ctx.currentTime);
+      this.musicGain.gain.setValueAtTime(this.getEffectiveBgmGain(), this.ctx.currentTime);
     }
   }
 
@@ -93,6 +135,137 @@ class AudioEngine {
 
   public getSfxVolume() {
     return this.sfxVolScale;
+  }
+
+  public pauseCombatTheme() {
+    if (!this.ctx || !this.musicGain) return;
+    this.fadeGain(this.musicGain, this.getEffectiveBgmGain() * 0.16, 0.45);
+  }
+
+  public resumeCombatTheme() {
+    if (!this.ctx || !this.musicGain || !this.isMusicPlaying) return;
+    this.fadeGain(this.musicGain, this.getEffectiveBgmGain(), 0.85);
+  }
+
+  private clearSpecialUltimateThemeTimers() {
+    if (this.specialUltimateIntervalId) {
+      clearInterval(this.specialUltimateIntervalId);
+      this.specialUltimateIntervalId = null;
+    }
+    this.specialUltimateTimerIds.forEach(timerId => clearTimeout(timerId));
+    this.specialUltimateTimerIds = [];
+  }
+
+  private scheduleSpecialUltimateNote(step: number) {
+    if (!this.ctx || !this.specialUltimateGain) return;
+
+    const now = this.ctx.currentTime;
+    const roots = [110.00, 130.81, 146.83, 164.81, 196.00, 220.00, 261.63, 329.63];
+    const root = roots[step % roots.length];
+    const phase = step < 7 ? 'activation' : step < 18 ? 'build' : 'climax';
+
+    const playTone = (
+      freq: number,
+      type: OscillatorType,
+      gainValue: number,
+      duration: number,
+      delay: number = 0,
+      detune: number = 0,
+    ) => {
+      if (!this.ctx || !this.specialUltimateGain || freq <= 0) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const filter = this.ctx.createBiquadFilter();
+      const start = now + delay;
+
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, start);
+      osc.detune.setValueAtTime(detune, start);
+      filter.type = phase === 'activation' ? 'lowpass' : 'bandpass';
+      filter.frequency.setValueAtTime(phase === 'climax' ? 1200 : 760, start);
+      filter.Q.setValueAtTime(phase === 'climax' ? 1.5 : 2.6, start);
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.linearRampToValueAtTime(gainValue, start + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.specialUltimateGain);
+      osc.start(start);
+      osc.stop(start + duration + 0.04);
+    };
+
+    const playImpact = (gainValue: number, duration: number, delay: number = 0) => {
+      if (!this.ctx || !this.specialUltimateGain) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      const start = now + delay;
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(105, start);
+      osc.frequency.exponentialRampToValueAtTime(28, start + duration);
+      gain.gain.setValueAtTime(gainValue, start);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+      osc.connect(gain);
+      gain.connect(this.specialUltimateGain);
+      osc.start(start);
+      osc.stop(start + duration + 0.03);
+    };
+
+    if (phase === 'activation') {
+      if (step % 2 === 0) playImpact(0.32, 0.24);
+      playTone(root, 'sawtooth', 0.08, 0.42);
+      playTone(root * 0.5, 'triangle', 0.08, 0.55);
+      return;
+    }
+
+    if (phase === 'build') {
+      playTone(root * 2, 'sawtooth', 0.09, 0.58);
+      playTone(root * 3, 'triangle', 0.07, 0.7, 0.02);
+      playTone(root * 4, 'sine', 0.045, 0.74, 0.06);
+      if (step % 3 === 0) playImpact(0.2, 0.18);
+      return;
+    }
+
+    playTone(root * 2, 'sawtooth', 0.14, 0.62, 0, -8);
+    playTone(root * 2, 'sawtooth', 0.1, 0.62, 0, 8);
+    playTone(root * 3, 'triangle', 0.09, 0.72, 0.02);
+    playTone(root * 4, 'sine', 0.055, 0.78, 0.05);
+    if (step % 2 === 0) playImpact(0.28, 0.22);
+  }
+
+  public playSpecialUltimateTheme() {
+    this.resume();
+    if (!this.ctx || !this.specialUltimateGain || this.isMuted) return;
+    if (this.isSpecialUltimateThemePlaying) return;
+
+    this.isSpecialUltimateThemePlaying = true;
+    this.pauseCombatTheme();
+
+    const now = this.ctx.currentTime;
+    this.specialUltimateGain.gain.cancelScheduledValues(now);
+    this.specialUltimateGain.gain.setValueAtTime(0.0001, now);
+    this.specialUltimateGain.gain.linearRampToValueAtTime(this.getSpecialUltimateGainTarget(), now + 0.35);
+
+    let step = 0;
+    this.scheduleSpecialUltimateNote(step++);
+    this.specialUltimateIntervalId = setInterval(() => {
+      this.scheduleSpecialUltimateNote(step++);
+    }, 280);
+
+    this.specialUltimateTimerIds = [
+      setTimeout(() => this.stopSpecialUltimateTheme(), SPECIAL_ULTIMATE_THEME_DURATION_MS)
+    ];
+  }
+
+  public stopSpecialUltimateTheme(resumeCombat: boolean = true) {
+    this.clearSpecialUltimateThemeTimers();
+    if (this.ctx && this.specialUltimateGain) {
+      this.fadeGain(this.specialUltimateGain, 0.0001, 0.75);
+    }
+    this.isSpecialUltimateThemePlaying = false;
+    if (resumeCombat) {
+      this.resumeCombatTheme();
+    }
   }
 
   public changeBgmForScreen(screen: string) {

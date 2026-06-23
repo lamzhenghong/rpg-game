@@ -1,4 +1,5 @@
 import { ElementType } from '../types';
+import { PLAYABLE_CHARACTERS } from './characters';
 
 export interface StoryStageReward {
   gems: number;
@@ -197,8 +198,55 @@ export const STORY_STAGES: Record<string, StoryStageSpec> = {
   }
 };
 
+const getCharacterStoryBossType = (element: ElementType): StoryEnemySpec['bossType'] => {
+  if (element === 'Cryo' || element === 'Hydro') return 'ice_golem';
+  if (element === 'Electro' || element === 'Anemo') return 'thunderbird';
+  return 'fire_dragon';
+};
+
+const getCharacterStoryStageSpec = (charId: string, act: number): StoryStageSpec => {
+  const character = PLAYABLE_CHARACTERS.find(c => c.id === charId);
+  const characterName = character?.name || 'Character';
+  const element = character?.element || 'Anemo';
+  const safeAct = Math.min(3, Math.max(1, act));
+  const recommendedLevel = safeAct === 1 ? 10 : safeAct === 2 ? 24 : 38;
+  const firstClearRewards: StoryStageReward = safeAct === 1
+    ? { gems: 150, mora: 10000, charXp: 0 }
+    : safeAct === 2
+      ? { gems: 300, mora: 22000, charXp: 0 }
+      : { gems: 500, mora: 40000, charXp: 0 };
+
+  const enemies: StoryEnemySpec[] = safeAct === 1
+    ? [{ name: `${characterName} Memory Shade`, type: 'Normal', element, level: recommendedLevel }]
+    : safeAct === 2
+      ? [{ name: `${characterName} Elite Echo`, type: 'Elite', element, level: recommendedLevel }]
+      : [{
+          name: `${characterName} Trial Boss`,
+          type: 'Boss',
+          element,
+          level: recommendedLevel,
+          bossType: getCharacterStoryBossType(element)
+        }];
+
+  return {
+    id: `char-${charId}-${safeAct}`,
+    chapter: 0,
+    name: `${characterName} Character Story Act ${safeAct}`,
+    recommendedLevel,
+    difficulty: safeAct === 3 ? 'Boss' : 'Normal',
+    desc: 'Character Stories are optional side battles that let you learn more about characters and earn Mora and Gems. They do not provide stat bonuses or combat power.',
+    enemies,
+    firstClearRewards
+  };
+};
+
 // Procedural generation helper for chapters 4 to 10
 export const getStageSpec = (stageId: string): StoryStageSpec => {
+  const charStoryMatch = stageId.match(/^char-(.+)-([123])$/);
+  if (charStoryMatch) {
+    return getCharacterStoryStageSpec(charStoryMatch[1], parseInt(charStoryMatch[2], 10));
+  }
+
   if (STORY_STAGES[stageId]) return STORY_STAGES[stageId];
   
   // Parse stageId like "4-3"
@@ -747,7 +795,7 @@ export const CHARACTER_STORIES_SCRIPTS: Record<string, Record<string, { before: 
       ],
       after: [
         { speaker: 'Marina', element: 'Hydro', text: 'Thank you, Eldric. The tides are returning to their natural flow.' },
-        { speaker: 'Eldric Thorne', element: 'Anemo', text: 'Your control over Hydro is outstanding. Your portrait profile is shining with a newly found resolve!' }
+        { speaker: 'Eldric Thorne', element: 'Anemo', text: 'Your control over Hydro is outstanding. This memory is safe again.' }
       ]
     },
     '2': {
@@ -755,7 +803,7 @@ export const CHARACTER_STORIES_SCRIPTS: Record<string, Record<string, { before: 
         { speaker: 'Marina', element: 'Hydro', text: 'Act II: The Deep Swell. I must face the Glacial Frost Golem to test if my water can pierce absolute zero.' }
       ],
       after: [
-        { speaker: 'Marina', element: 'Hydro', text: 'I did it! The frost didn\'t freeze my droplets. My Hydro energy has ascended!' }
+        { speaker: 'Marina', element: 'Hydro', text: 'I did it! The frost didn\'t freeze my droplets, and the memory is finally calm.' }
       ]
     },
     '3': {
@@ -763,7 +811,7 @@ export const CHARACTER_STORIES_SCRIPTS: Record<string, Record<string, { before: 
         { speaker: 'Marina', element: 'Hydro', text: 'Act III: Sovereign of Tides. A final skirmish against the Tempest Thunderbird. The skies meet the deep ocean!' }
       ],
       after: [
-        { speaker: 'Marina', element: 'Hydro', text: 'The ocean has accepted my call. I am now the sovereign of tides!' }
+        { speaker: 'Marina', element: 'Hydro', text: 'The ocean remembers my call. That chapter of my past feels lighter now.' }
       ]
     }
   }
@@ -778,12 +826,12 @@ export const getCharacterStoryScript = (charId: string, act: number): { before: 
   const charName = charId.toUpperCase();
   return {
     before: [
-      { speaker: charName, text: `This is my Story Act ${act}. I need to conquer this elemental trial to prove my strength!` },
-      { speaker: 'Aetheria Oracle', text: `Begin the trial, prove your dedication.` }
+      { speaker: charName, text: `This is my Story Act ${act}. This optional memory battle will reveal another piece of my past.` },
+      { speaker: 'Aetheria Oracle', text: `Begin the side battle and record what you learn.` }
     ],
     after: [
-      { speaker: charName, text: `The trial is complete! My powers have expanded. Thank you for guiding me!` },
-      { speaker: 'System', text: `Completed Character Story Act ${act} successfully! Portrait upgraded.` }
+      { speaker: charName, text: `The side battle is complete. Thank you for helping me understand this memory.` },
+      { speaker: 'System', text: `Completed Character Story Act ${act}. Mora and Gems awarded.` }
     ]
   };
 };

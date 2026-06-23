@@ -1,127 +1,7 @@
 import React from 'react';
 import { X, Sparkles, Flame, Droplet, Snowflake, Zap, Wind, ShieldAlert, Leaf } from 'lucide-react';
 import { ElementType } from '../types';
-
-interface ReactionDetails {
-  name: string;
-  elements: ElementType[];
-  multiplier: string;
-  effect: string;
-  desc: string;
-  colorClass: string;
-  badgeBorder: string;
-}
-
-const REACTIONS_LIST: ReactionDetails[] = [
-  {
-    name: 'Vaporize',
-    elements: ['Hydro', 'Pyro'],
-    multiplier: '2.0x Damage Multiplier',
-    effect: 'Thermal Vaporization',
-    desc: 'Amplifies the triggering attack to deal double damage. Highly effective for breaking single-target thermal nodes.',
-    colorClass: 'from-orange-500/20 to-red-500/25 text-orange-400',
-    badgeBorder: 'border-orange-500/30'
-  },
-  {
-    name: 'Frozen',
-    elements: ['Hydro', 'Cryo'],
-    multiplier: 'Incapacitation',
-    effect: 'Deep Freeze (3.5s Stun)',
-    desc: 'Locks the enemy in ice, completely incapacitating them. Frozen targets can be shattered by other dynamic elements.',
-    colorClass: 'from-sky-500/20 to-blue-500/25 text-sky-400',
-    badgeBorder: 'border-sky-500/30'
-  },
-  {
-    name: 'Hyper-Shatter',
-    elements: ['Cryo', 'Hydro', 'Anemo'],
-    multiplier: '2.6x Damage + Splash',
-    effect: 'Infrasonic Shatter & Secondary Freeze',
-    desc: 'Striking a frozen target with heavy elements (Anemo, Geo, Pyro, Electro) shatters the ice, dealing 2.6x damage and freezing adjacent slimes.',
-    colorClass: 'from-cyan-400/20 to-indigo-500/25 text-cyan-300',
-    badgeBorder: 'border-cyan-400/30 font-extrabold'
-  },
-  {
-    name: 'Bloom Eruption',
-    elements: ['Hydro', 'Dendro'],
-    multiplier: '+750 Flat Damage',
-    effect: 'Botanical Grass Rupture',
-    desc: 'Spawns a rapid botanical seed core that bursts, dealing 750 trigger damage to the enemy and 450 splash damage to nearby enemies.',
-    colorClass: 'from-green-500/20 to-emerald-500/25 text-emerald-400',
-    badgeBorder: 'border-emerald-500/30'
-  },
-  {
-    name: 'Hyperbloom Quasar',
-    elements: ['Hydro', 'Dendro', 'Electro'],
-    multiplier: '2.3x Damage + Chains',
-    effect: 'Conductive Spark Chaining',
-    desc: 'Triggers lightning sparks from botanical cores, dealing 2.3x damage to the target and propagating chain-shocks to up to 3 adjacent slimes.',
-    colorClass: 'from-teal-500/20 to-purple-500/25 text-teal-300',
-    badgeBorder: 'border-teal-400/30'
-  },
-  {
-    name: 'Overloaded',
-    elements: ['Pyro', 'Electro'],
-    multiplier: '+400 Flat Damage',
-    effect: 'Kinetic Shockwave + Knockback',
-    desc: 'Triggers a heat-energy explosion that flings the target outward, disrupting coordinate attacks and pushing back crowds.',
-    colorClass: 'from-pink-500/20 to-rose-500/25 text-pink-400',
-    badgeBorder: 'border-pink-500/30'
-  },
-  {
-    name: 'Superconduct',
-    elements: ['Cryo', 'Electro'],
-    multiplier: '+200 Flat Damage',
-    effect: 'Armor Shred (Steel Weakening)',
-    desc: 'Emits a frost surge that weakens target defense systems, amplifying standard steel-sword and dynamic strikes.',
-    colorClass: 'from-purple-500/20 to-fuchsia-500/25 text-purple-400',
-    badgeBorder: 'border-purple-500/30'
-  },
-  {
-    name: 'Burning',
-    elements: ['Dendro', 'Pyro'],
-    multiplier: 'Continuous Ticking',
-    effect: 'Thermal Ignite (120 Frame Burn)',
-    desc: 'Ignites the targets inside a loop, applying fire damage over time to melt down larger slimes.',
-    colorClass: 'from-rose-500/20 to-red-600/25 text-red-400',
-    badgeBorder: 'border-rose-500/30'
-  },
-  {
-    name: 'Crystallize',
-    elements: ['Geo'],
-    multiplier: 'Durable Ward Drop',
-    effect: 'Durable Shield Crystal Protection',
-    desc: 'Colliding Geo with Pyro, Hydro, Electro, or Cryo crystallization nodes drops protective crystals that grant a dynamic barrier.',
-    colorClass: 'from-amber-500/20 to-yellow-600/25 text-amber-400',
-    badgeBorder: 'border-amber-500/30'
-  },
-  {
-    name: 'Swirl Splash',
-    elements: ['Anemo'],
-    multiplier: 'Aoe Debuff Spreading',
-    effect: 'Aerodynamic Vector Propagation',
-    desc: 'Swirl spreads the target\'s existing element condition to all nearby slimes, preparing them for grand reaction chainings.',
-    colorClass: 'from-emerald-400/20 to-teal-500/25 text-emerald-300',
-    badgeBorder: 'border-emerald-400/30'
-  },
-  {
-    name: 'Melt',
-    elements: ['Cryo', 'Pyro'],
-    multiplier: '2.0x Damage Multiplier',
-    effect: 'Thermal Liquefaction',
-    desc: 'Melts Cryo armor or targets with Pyro heat, amplifying the triggering attack to deal double damage.',
-    colorClass: 'from-orange-500/20 to-yellow-600/25 text-orange-350',
-    badgeBorder: 'border-orange-400/30'
-  },
-  {
-    name: 'Electro-Charged',
-    elements: ['Hydro', 'Electro'],
-    multiplier: '+300 Flat Damage + Chains',
-    effect: 'Continuous Electrical Discharge',
-    desc: 'Electrifies a wet target, dealing additional damage and propagating chain-shocks to up to 3 adjacent slimes.',
-    colorClass: 'from-purple-500/20 to-blue-500/25 text-indigo-400',
-    badgeBorder: 'border-indigo-400/30'
-  }
-];
+import { ELEMENTAL_REACTIONS } from '../data/elementalReactions';
 
 interface ElementalReactionsModalProps {
   isOpen: boolean;
@@ -196,9 +76,9 @@ export default function ElementalReactionsModal({ isOpen, onClose }: ElementalRe
           
           {/* Reaction Grid list */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {REACTIONS_LIST.map((rx, idx) => (
+            {ELEMENTAL_REACTIONS.map((rx) => (
               <div 
-                key={idx}
+                key={rx.id}
                 className={`p-5 rounded-xl bg-gradient-to-br ${rx.colorClass} border ${rx.badgeBorder} shadow-lg space-y-3 flex flex-col justify-between`}
               >
                 <div>

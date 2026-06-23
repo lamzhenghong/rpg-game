@@ -14,6 +14,7 @@ import { Shield, Sparkles, BookOpen, Compass, Sword, Landmark, Hammer, Coins, Tr
 import { ElementType, WeaponType, Weapon, Artifact, ArtifactSlot, ArtifactSet } from '../types';
 import { ARTIFACT_SETS, ARTIFACT_NAMES, getArtifactMainStat } from '../data/artifacts';
 import { LanguageType, t } from '../utils/i18n';
+import { ELEMENTAL_REACTIONS } from '../data/elementalReactions';
 
 import aureliaBanner from '../../assets/aurelia_banner.png';
 import kaelenBanner from '../../assets/kaelen_banner.png';
@@ -648,7 +649,7 @@ export default function GDDViewer({
                           {(() => {
                             const completedActs = completedCharacterStoryActs[selectedChar.id] || 0;
                             if (completedActs === 0) {
-                              return <p className="italic text-slate-500 text-[10px]">No character story acts completed yet. Play them inside the Story Mode menu!</p>;
+                              return <p className="italic text-slate-500 text-[10px]">No character story acts completed yet. Character Stories are optional side battles for Mora, Gems, and lore.</p>;
                             }
                             return (
                               <div className="space-y-2">
@@ -656,7 +657,7 @@ export default function GDDViewer({
                                   <div className="border-b border-slate-800 pb-1.5">
                                     <span className="text-[9px] font-black text-amber-400 uppercase tracking-wide">Act I Cleared: Origin Mythos</span>
                                     <p className="text-[10px] text-slate-400 mt-0.5 leading-normal">
-                                      Unlocked secrets of {selectedChar.name}'s element alignment. Proven to excel under basic training criteria.
+                                      Learned the first memory from {selectedChar.name}'s past and earned Mora and Gems.
                                     </p>
                                   </div>
                                 )}
@@ -664,7 +665,7 @@ export default function GDDViewer({
                                   <div className="border-b border-slate-800 pb-1.5">
                                     <span className="text-[9px] font-black text-amber-400 uppercase tracking-wide">Act II Cleared: Awakening</span>
                                     <p className="text-[10px] text-slate-400 mt-0.5 leading-normal">
-                                      Tested against elemental hazards and ascended, gaining massive portrait stat multipliers.
+                                      Cleared the elite memory battle and recorded more lore. Rewarded Mora and Gems only.
                                     </p>
                                   </div>
                                 )}
@@ -672,7 +673,7 @@ export default function GDDViewer({
                                   <div>
                                     <span className="text-[9px] font-black text-emerald-400 uppercase tracking-wide">Act III Cleared: Sovereign</span>
                                     <p className="text-[10px] text-slate-400 mt-0.5 leading-normal">
-                                      Fully completed the dragon altars trial. Attained peak stardust connection.
+                                      Finished the boss memory battle and completed this side story. Rewarded Mora and Gems only.
                                     </p>
                                   </div>
                                 )}
@@ -1380,6 +1381,18 @@ export default function GDDViewer({
                     Elemental Reactions Setup
                   </h4>
                   <div className="space-y-3 text-[11px] font-mono leading-relaxed">
+                    {ELEMENTAL_REACTIONS.map((rx) => (
+                      <div key={rx.id} className="bg-black/30 p-2.5 rounded border border-white/5 space-y-1">
+                        <span className={`text-[10px] font-extrabold ${rx.textClass} uppercase tracking-wide`}>
+                          {rx.name} ({rx.pairing})
+                        </span>
+                        <p className="text-slate-400 leading-normal text-[10px]">
+                          {rx.effect}. {rx.desc} Result: {rx.multiplier}.
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="hidden" aria-hidden="true">
                     <div className="bg-black/30 p-2.5 rounded border border-white/5 space-y-1">
                       <span className="text-[10px] font-extrabold text-orange-400 uppercase tracking-wide">🔥 Melt (Pyro + Cryo)</span>
                       <p className="text-slate-400 leading-normal text-[10px]">Multiplies structural flash damage by 2.0x for instant elite disruption.</p>
